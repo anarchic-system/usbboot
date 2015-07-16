@@ -1,0 +1,4081 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<meta name="description" content="This document presents how to setup a multi-boot USB stick loaded with several live systems including FreeDOS, a partition dedicated to FreeDOS and a third one crypted for storing persistent data" />
+<meta name="keywords" content="implementation,usbkey,usb key,usb stick,multi-boot,live system,kali,systemrescuecd,tails,debian,debian installer,grml,gparted,freedos,firmware,fat,msdos,ms-dos,luks,crypted,partition" />
+<title>Creation of a multi-boot USB stick, including FreeDOS and a crypted partition for persitent data</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+/*
+ * asciidoc CSS
+ *  for xhtml11 output
+ *
+ *  by lerouge
+ *  ~/.asciidoc/stylesheets/xhtml11-mine.css
+ */
+
+/* justify body text */
+body {
+  margin: 1em 5% 1em 5%;
+  text-align: justify;
+}
+
+/* tableblock */
+div.tableblock {
+  margin-left: 1.5em;
+}
+
+/* indent first line of paragraph */
+div.paragraph p {text-indent: 1em;}
+
+/* add a bit of padding to list elements (Will) */
+dd {
+  margin-bottom: 1em;
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>Timetombs – Tip – Unix – System administration – USB key boot for rescue and more</h1>
+<span id="author">LeRouge</span><br />
+<div id="toc">
+  <div id="toctitle">Table of contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_preamble">1. Preamble</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Why?</p></div>
+<div class="paragraph"><p>First to reach the goals set below, inspired by my need to update some firmwares which upgrades are only available as <em>MS-DOS</em> binaries and some blog posts by <a href="http://www.preining.info/blog/contact/">Norbert Preining</a>.</p></div>
+<div class="paragraph"><p>But also just because I wanted to try. A lot of simpler solutions (everything in <em>FAT</em> for instance) are existing. I wanted to test and have fun :)</p></div>
+<div class="paragraph"><p>Bottom of the line, with <em>UEFI</em> solution, <em>FreeDOS</em> is not working.</p></div>
+<div class="paragraph"><p>And the setup of the <em>data</em> partition is not explained here.</p></div>
+<div class="sect2">
+<h3 id="id_preamble_goal">1.1. Goal / requirements</h3>
+<div class="paragraph"><p>The goal is the following (as of 2015-06): get a multi-purpose / multi-boot USB stick</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+able to boot
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://www.debian.org/"><em>Debian</em></a> (actually, the <em>Debian installer</em>, aka <em>DI</em>, not <em>Debian Live</em>),
+</p>
+</li>
+<li>
+<p>
+<a href="https://tails.boum.org/"><em>Tails</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.sysresccd.org/"><em>System RescueCD</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://gparted.org/"><em>GParted</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="https://grml.org/"><em>GRML</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="https://www.kali.org/"><em>Kali</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://clonezilla.org/"><em>Clonezilla</em></a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.freedos.org/"><em>FreeDOS</em></a> for firmware upgrades,
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+on as many machines as possible,
+</p>
+</li>
+<li>
+<p>
+while being able to securely keep any data generated while using one of those systems,
+</p>
+</li>
+<li>
+<p>
+and have the solution as easily as possible maintenable (when one of the systems is updated).
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_preamble_implementation">1.2. Implementation – Big picture</h3>
+<div class="sect3">
+<h4 id="_live_systems">1.2.1. Live systems</h4>
+<div class="paragraph"><p>This requirement is easy to fullfil. One just have to download the wanted systems and store them on the USB stick.</p></div>
+<div class="paragraph"><p>The constraint being the size required. Images to boot are generally under or roughly a 1 Gbyte (the main exception – as of 2015-06 – being <em>Kali</em> that weigths 3,1 Gbytes). So having 4 to 8 Gbytes should be OK (the more space, the more live system images can be stored and therefore booted).</p></div>
+<div class="paragraph"><p><em>FreeDOS</em> is a bit special as if it is really tiny, it must have some room available to store firmware upgrades. Nowadays, those firmware upgrades can be up to a few tens of mega bytes. So, 256 Mbytes should be OK.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_machine_diversity">1.2.2. Machine diversity</h4>
+<div class="paragraph"><p>Nowadays and roughly since 2011/2012, we have computers using <em>BIOS</em> xor <em>UEFI</em>.</p></div>
+<div class="paragraph"><p>Ideally, the same USB stick should be able to boot both kind of machines.</p></div>
+<div class="paragraph"><p>It will not be the case first; the solution will be either a USB stick to boot <em>BIOS</em> machines <strong>xor</strong> <em>UEFI</em> ones (see <a href="#id_bigpicture">[id_bigpicture]</a> about those two ways). This document might be updated later on with such a solution.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_user_data">1.2.3. User data</h4>
+<div class="paragraph"><p>This requirement is also easy. One will have to add a partition for that. This partition will be crypted using <em>LUKS</em>.</p></div>
+<div class="paragraph"><p>A few giga bytes should be enough (for everybody©®™).</p></div>
+</div>
+<div class="sect3">
+<h4 id="_maintenance">1.2.4. Maintenance</h4>
+<div class="paragraph"><p>This requirement may be tricky.</p></div>
+<div class="paragraph"><p>Ideally, one should just have to drop a new (updated) ISO on the USB stick. I can see three ways to do that:</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+keep the name of the ISO downloaded: this means the links in <em>Grub2</em> configuration must be updated too. The less one touch a configuration file, the better it is.
+</p>
+</li>
+<li>
+<p>
+keep the name of the ISO downloaded but use symlinks that are the filename used in <em>Grub2</em> configuration. This requires to use a filesystem allowing links (i.e. not <em>FAT</em>) and update the symlinks to point to the new ISO file name,
+</p>
+</li>
+<li>
+<p>
+rename the ISO file downloaded to a given, fixed name.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>Even if the solution 1 is the most dangerous, it also allows to update the label of what will be booted. So one will stick with this solution.</p></div>
+<div class="paragraph"><p>So, one will try to (only) use ISO files. But there are two limits:</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+all live systems one may want be able to boot might not be bootable as an ISO image,
+</p>
+</li>
+<li>
+<p>
+<em>FreeDOS</em> is usefull to execute MS-DOS executables that are firmware upgrades. That means one must not only have <em>FreeDOS</em> but also a payload. And if one use an image for <em>FreeDOS</em> that means that image must be edited each time one need to use a new payload. Even if editing an image might not be that difficult (at least for people accustomed to CLI), that&#8217;s still another step to follow. So one might try to have a part of the USB stick dedicated to <em>FreeDOS</em> where one would just have to drop the payload.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="id_bigpicture_bios">1.2.5. Big picture – BIOS only</h4>
+<div class="paragraph"><p><em>BIOS</em> does not care about <em>msdos</em> or <em>GPT</em> partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Warning" src="data:image/png;base64,
+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
+/F/lgJiyQFHragAAAABJRU5ErkJggg==" />
+</td>
+<td class="content">
+<div class="title">BIOS only meaning</div>
+<div class="paragraph"><p>By “BIOS only”, one means <em>Grub2</em> version <em>i386-pc</em> (<strong>not</strong> <em>x86_64-uefi</em>) and <em>msdos</em> partition table.</p></div>
+<div class="paragraph"><p>This USB stick is made to boot on computer using a <em>BIOS</em> (<strong>not</strong> an <em>[U]EFI</em>).</p></div>
+<div class="paragraph"><p>By lack of time and hardware available to test, I gave up the combinaison <em>BIOS</em> / <em>GPT</em> partition table. This has the side advantage to not have to deal with a <em>BIOS boot partition</em><span class="footnote"><br />[<a href="https://en.wikipedia.org/wiki/BIOS_boot_partition">https://en.wikipedia.org/wiki/BIOS_boot_partition</a>]<br /></span> (aka <em>EF02</em>) and its alignment subtilities.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>One USB stick with</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+a <em>msdos</em> partition table,
+</p>
+</li>
+<li>
+<p>
+three partitions,
+</p>
+<div class="olist loweralpha compact"><ol class="loweralpha">
+<li>
+<p>
+<em>freedos</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 256 Mbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem:  <em>fat32</em>,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>bdc3-a6ca</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,msdos1)</em>
+</p>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>FreeDOS</em>, in <em>/fdos/</em> directory,
+</p>
+</li>
+<li>
+<p>
+<em>syslinux</em>, in <em>/syslinux/</em> directory,
+</p>
+</li>
+<li>
+<p>
+other bootable system images, in <em>/img/</em>,
+</p>
+</li>
+<li>
+<p>
+MS-DOS executable payload (typically firmware upgrade MS-DOS binaries), in <em>/payload/</em> directory,
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>main</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 10 Gbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem: <em>ext4</em>,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>e5b1bee9-96e2-4e82-aae1-339cbbd6050c</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,msdos2)</em>,
+</p>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>Grub2</em> in <em>/boot/grub/</em>,
+</p>
+</li>
+<li>
+<p>
+any image of live system one wants to boot, in <em>/boot/iso/</em>,
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>data</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 2 Gbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem: <em>ext4</em> in a <em>LUKS</em> cryptocontainer,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>a3d0006b-088e-4015-9773-9f0db2d51658</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,msdos3)</em>,
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><em>Grub2</em> will not address this partition.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+content the user would like to keep when using a live system (such as <em>Tails</em> or <em>Kali</em>).
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="id_bigpicture_uefi">1.2.6. Big picture – UEFI</h4>
+<div class="paragraph"><p>One USB stick with</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+a <em>GPT</em> partition table,
+</p>
+</li>
+<li>
+<p>
+three partitions,
+</p>
+<div class="olist loweralpha compact"><ol class="loweralpha">
+<li>
+<p>
+<em>EFI system partition</em><span class="footnote"><br />[<a href="https://en.wikipedia.org/wiki/EFI_System_partition">https://en.wikipedia.org/wiki/EFI_System_partition</a>]<br /></span> (aka <em>ESP</em>) partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 100 Mbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem: <em>fat32</em>,
+</p>
+</li>
+<li>
+<p>
+GUID: <em>C12A7328-F81F-11D2-BA4B-00A0C93EC93B</em>,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>DCBE-BB01</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,gpt1)</em>,
+</p>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+the partition required by <em>UEFI</em> compliant machines,
+</p>
+</li>
+<li>
+<p>
+boot loader early stuff,
+</p>
+</li>
+<li>
+<p>
+<em>UEFI</em> stuff…
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>freedos</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 256 Mbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem:  <em>fat32</em>,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>CFCD-03C7</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,gpt1)</em>
+</p>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>FreeDOS</em>, in <em>FIXME</em>,
+</p>
+</li>
+<li>
+<p>
+MS-DOS executable payload, in <em>/payload/</em>,
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>main</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 10 Gbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem: <em>ext</em>,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>28345150-0177-4076-89a5-38b7fdff26c4</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,gpt2)</em>,
+</p>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>Grub2</em> in <em>/boot/grub/</em>,
+</p>
+</li>
+<li>
+<p>
+any image one wants to boot, in <em>/boot/iso/</em>,
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>data</em> partition
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size: 2 Gbytes,
+</p>
+</li>
+<li>
+<p>
+filesystem: <em>ext4</em> in a <em>LUKS_</em> cryptocontainer,
+</p>
+</li>
+<li>
+<p>
+UUID: <code>a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb</code>,
+</p>
+</li>
+<li>
+<p>
+Grub2 name: <em>(hd0,gpt3)</em>,
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><em>Grub2</em> will not address this partition.</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+content:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+content the user would like to keep when using a live system (such as <em>Tails</em> or <em>Kali</em>).
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="id_preamble_prerequisite">1.3. Pre-requisites</h3>
+<div class="sect3">
+<h4 id="_hardware">1.3.1. Hardware</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+a USB key of at least 12 Gbytes.
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title">USB stick size</div>
+<div class="paragraph"><p>Size can be adapted.</p></div>
+<div class="paragraph"><p>Less size on the <em>multib_main</em> partition means less live systems available to the end-user.</p></div>
+<div class="paragraph"><p>Less size on the <em>multib_data</em> partition means less available space to the end-user for his persistent data.</p></div>
+<div class="paragraph"><p>Less size on <em>multib_free</em> partition means less available space for the payload (firmware upgrade binaries). This partition being quite small that&#8217;s probably not the first one to shrink. Note that as this documentation documents a complete copy of <em>FreeDOS</em> onto this partition, its minimal size must be around 150 Mbytes.</p></div>
+</td>
+</tr></table>
+</div>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_software">1.3.2. Software</h4>
+<div class="ulist compact"><div class="title">tools</div><ul>
+<li>
+<p>
+<em>Grub2</em>:
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>EFI</em> version: deb:<em>grub-efi-amd64</em> (2.02\~beta2-26 0)
+</p>
+</li>
+<li>
+<p>
+<em>BIOS</em> version: deb:<em>grub-pc</em> (2.02\~beta2-26)
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>mkfs.fat</em>: deb:<em>dosfstools</em> (3.0.28-1)
+</p>
+</li>
+<li>
+<p>
+<em>syslinux</em>: deb:<em>syslinux-common</em> (3:6.03+dfsg-7)
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+this package provides <em>memdisk</em>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>rsync</em>: deb:<em>rsync</em> (3.1.1-3)
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+not mandatory as <em>cp</em> can be used
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="ulist compact"><div class="title">live systems</div><ul>
+<li>
+<p>
+<a href="https://tails.boum.org/"><em>Tails</em></a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://dl.amnesia.boum.org/tails/stable/tails-i386-1.4/tails-i386-1.4.iso">Tails, v.1.4</a>,
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="http://www.sysresccd.org/"><em>SystemRescueCD</em></a>,
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.5.3/systemrescuecd-x86-4.5.3.iso?r=&amp;ts=1434488949&amp;use_mirror=softlayer-dal">http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.5.3/systemrescuecd-x86-4.5.3.iso?r=&amp;ts=1434488949&amp;use_mirror=softlayer-dal</a>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="http://gparted.org/"><em>GNU/Gnome Parted</em></a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://sourceforge.net/projects/gparted/files/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso/download">http://sourceforge.net/projects/gparted/files/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso/download</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso?r=&amp;ts=1434488852&amp;use_mirror=iweb">http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso?r=&amp;ts=1434488852&amp;use_mirror=iweb</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-amd64.iso?r=&amp;ts=1434488893&amp;use_mirror=iweb">http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-amd64.iso?r=&amp;ts=1434488893&amp;use_mirror=iweb</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i686-pae.iso?r=&amp;ts=1434488915&amp;use_mirror=softlayer-dal">http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i686-pae.iso?r=&amp;ts=1434488915&amp;use_mirror=softlayer-dal</a>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="https://www.kali.org/"><em>Kali</em></a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://cdimage.kali.org/kali-1.1.0a/kali-linux-1.1.0a-amd64.iso">Kali 64b v.1.1.0a</a>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="http://www.debian.org/"><em>Debian</em></a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://cdimage.debian.org/debian-cd/8.1.0/multi-arch/iso-cd/debian-8.1.0-amd64-i386-netinst.iso">http://cdimage.debian.org/debian-cd/8.1.0/multi-arch/iso-cd/debian-8.1.0-amd64-i386-netinst.iso</a>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="http://grml.org/"><em>GRML</em></a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://download.grml.org/grml96-full_2014.11.iso"><em>GRML</em>64&amp;32b, v. 2014.11</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://download.grml.org/grml64-full_2014.11.iso"><em>GRML</em>64b, v. 2014.11</a>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<a href="http://clonezilla.org/">Clonezilla</a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://clonezilla.org/downloads/download.php?branch=stable">http://clonezilla.org/downloads/download.php?branch=stable</a>
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="ulist compact"><div class="title">firmware upgrade binaries</div><ul>
+<li>
+<p>
+depends on your computer model; refer to you manufacturer web site.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_privileges">1.3.3. Privileges</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>root</em>: required to make partition table and filesystem. FIXME- ideally list capabilities required -FIXME
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_configuration">1.3.4. Configuration</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+the <em>Grub2</em> configuration file <em>grub.cfg</em> tailored to our needs.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_variables">1.3.5. Variables</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<code>&lt;device_usbstick&gt;</code> (<code>/dev/sdb</code>): path of the USB stick used on the machine
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Caution" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title">USB stick path and data loss</div>
+<div class="paragraph"><p>Do not mess with this path. If you use a wrong value, you will (logically) destroy the device (erase data) if there is one. You will probably read this after you did it… next time RTFM <strong>before</strong> :)</p></div>
+</td>
+</tr></table>
+</div>
+</li>
+<li>
+<p>
+<code>&lt;dir_usbstick_partition_esp&gt;</code> (<code>/dev/sdb1</code>): path of the <em>ESP</em> partition (<em>UEFI</em> solution)
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_usbstick_partition_freedos&gt;</code> (<code>/dev/sdb1</code> for <em>BIOS</em> version and <code>/dev/sdb2</code> for <em>UEFI</em> version): path of the <em>FreeDOS</em> partition
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_usbstick_partition_main&gt;</code> (<code>/dev/sdb2</code> for <em>BIOS</em> version and <code>/dev/sdb3</code> for <em>UEFI</em> version): path of the <em>main</em> partition
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_usbstick_partition_data&gt;</code> (<code>/dev/sdb3</code> for <em>BIOS</em> version and <code>/dev/sdb4</code> for <em>UEFI</em> version): path of the <em>data</em> partition
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_download&gt;</code> (<code>~/!down</code>): directory where ISO images are downloaded
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_mount_usbstick_esp</code> (<code>/media/tmp/boot/efi</code>): directory where the <em>esp</em> partition (see <a href="#id_bigpicture_uefi">[id_bigpicture_uefi]</a>) on our USB stick is mounted
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_mount_usbstick_freedos&gt;</code> (<code>/media/tmp/</code>): directory where the <em>freedos</em> partition (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) on our USB stick is mounted
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_mount_usbstick_main&gt;</code> (<code>/media/tmp/</code>): directory where the <em>main</em> (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) partition on our USB stick is mounted
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_mount_usbstick_data&gt;</code> (<code>/media/tmp/</code>): directory where the <em>data</em>(see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>)  partition on our USB stick is mounted
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_mount_image&gt;</code> (<code>/mnt/tmp/</code>): directory where (downloaded) ISO images are mounted
+</p>
+</li>
+<li>
+<p>
+<code>&lt;dir_freedos_staging&gt;</code> (<code>freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/</code>): directory where the content of <em>FreeDOS</em> image has been extracted and stored and therefore where the <em>FreeDOS</em> image content is prepared
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="id_preamble_source">1.4. Sources</h3>
+<div class="paragraph"><p>This document is derived from</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with </em>FreeDOS<em>)</em>,
+</p>
+</li>
+<li>
+<p>
+and blog posts by <a href="http://www.preining.info/blog/contact/">Norbert Preining</a>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://www.preining.info/blog/2014/05/usb-stick-tails-systemrescuecd/"><em>USB stick with Tails and SystemRescueCD</em> on 2014-05-01</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.preining.info/blog/2014/12/tails-1-2-1-debian-jessie-installer-system-rescue-cd-usb/"><em>Tails 1.2.1, Debian jessie installer, System Rescue CD on USB</em> on 2014-12-08</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.preining.info/blog/2015/05/usb-stick-update-tails-debian-gparted-sysrescd/"><em>USB stick update: TAILS 1.4, GParted 0.22, SysResCD 4.5.2, Debian Jessie</em> on 2015-05-28</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.preining.info/blog/2015/05/usb-stick-update-debian-is-back-plus-grml/"><em>USB stick update: Debian is back, plus GRML</em> on 2015-05-30</a>,
+</p>
+</li>
+<li>
+<p>
+and <a href="http://www.preining.info/software/grub.cfg">his <em>Grub2</em> configuration</a>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="id_preamble_ressource">1.5. Ressources</h3>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="https://en.wikipedia.org/wiki/BIOS_Boot_partition">BIOS boot partition</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://dedoimedo.com/computers/grub-2.html">http://dedoimedo.com/computers/grub-2.html</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.syslinux.org/wiki/index.php/MEMDISK">http://www.syslinux.org/wiki/index.php/MEMDISK</a>
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_grub2">1.5.1. Grub2</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="https://www.gnu.org/software/grub/manual/grub.html">https://www.gnu.org/software/grub/manual/grub.html</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.linux.org/threads/understanding-the-various-grub-modules.7535/">http://www.linux.org/threads/understanding-the-various-grub-modules.7535/</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://lukeluo.blogspot.com/2013/06/grub-how-to-4-memdisk-and-loopback.html?<em>escaped_fragment</em>=#!">http://lukeluo.blogspot.com/2013/06/grub-how-to-4-memdisk-and-loopback.html?<em>escaped_fragment</em>=#!</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://rodsbooks.com/gdisk/bios.html">Legacy BIOS Issues with GPT</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://ubuntuforums.org/showthread.php?t=1549847">ISO Booting with Grub 2 / #1</a>
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect3">
+<h4 id="_freedos">1.5.2. FreeDOS</h4>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="http://www.freedos.org/wiki/index.php/Install">http://www.freedos.org/wiki/index.php/Install</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://freedos.10956.n7.nabble.com/BIOS-update-with-FreeDOS-grub2-on-USB-Flash-td19717.html">http://freedos.10956.n7.nabble.com/BIOS-update-with-FreeDOS-grub2-on-USB-Flash-td19717.html</a>
+</p>
+</li>
+<li>
+<p>
+<a href="https://lists.gnu.org/archive/html/help-grub/2012-06/msg00047.html">https://lists.gnu.org/archive/html/help-grub/2012-06/msg00047.html</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://hype-free.blogspot.com/2008/12/booting-freedos-with-grub.html?m=1">http://hype-free.blogspot.com/2008/12/booting-freedos-with-grub.html?m=1</a>
+</p>
+</li>
+<li>
+<p>
+<a href="https://lists.gnu.org/archive/html/help-grub/2012-06/msg00047.html">Re: "freedos" Command HowTo?</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://derek.chezmarcotte.ca/?p=340">FreeDOS 1.1 USB Boot Image</a>
+</p>
+</li>
+<li>
+<p>
+<a href="https://lists.gnu.org/archive/html/help-grub/2010-04/msg00012.html">https://lists.gnu.org/archive/html/help-grub/2010-04/msg00012.html</a>
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_sumup">2. Sumup – What to do</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>For people in a hurry or knowing how to do things, here is a short version of what to do:</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+prepare the USB stick
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+for the <em>BIOS</em> solution
+</p>
+<div class="olist loweralpha compact"><ol class="loweralpha">
+<li>
+<p>
+create a <em>msdos</em> partition table
+</p>
+</li>
+<li>
+<p>
+create three partitions
+</p>
+<div class="olist lowerroman compact"><ol class="lowerroman">
+<li>
+<p>
+<em>fat</em>, 256 Gbytes for <em>FreeDOS</em>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+careful with this partition start place; there must be enough place for <em>Grub2</em> (MBR)
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>ext4</em>, 10 Gbytes for <em>Grub2</em> and live systems images
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size requirements are function of the number of live systems one wants to be able to boot
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>LUKS</em>/<em>ext4</em>, whatever Gbytes for user&#8217;s peristent data
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+format the first two partitions
+</p>
+</li>
+<li>
+<p>
+install <em>Grub2</em> onto the USB stick
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+for the <em>UEFI</em> solution
+</p>
+<div class="olist loweralpha compact"><ol class="loweralpha">
+<li>
+<p>
+create a <em>gpt</em> partition table
+</p>
+</li>
+<li>
+<p>
+create four partitions
+</p>
+<div class="olist lowerroman compact"><ol class="lowerroman">
+<li>
+<p>
+<em>fat</em>, 100 Gbytes for <em>UEFI system partition</em> (<em>ESP</em>),
+</p>
+</li>
+<li>
+<p>
+<em>fat</em>, 256 Gbytes for <em>FreeDOS</em>
+</p>
+</li>
+<li>
+<p>
+<em>ext4</em>, 10 Gbytes for <em>Grub2</em> and live systems images
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+size requirements are function of the number of live systems one wants to be able to boot
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>LUKS</em>/<em>ext4</em>, whatever Gbytes for user&#8217;s peristent data
+</p>
+</li>
+</ol></div>
+</li>
+<li>
+<p>
+format the first three partitions
+</p>
+</li>
+<li>
+<p>
+install <em>Grub2</em> onto the USB stick
+</p>
+</li>
+</ol></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+copy all the wanted live system images onto the USB stick
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>FreeDOS</em> image must be pre-built and requires <em>memdisk</em>
+</p>
+</li>
+<li>
+<p>
+<em>Debian</em> requires specific <em>initrd</em> files
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+install <em>FreeDOS</em>
+</p>
+</li>
+<li>
+<p>
+copy <em>Grub2</em> configuration onto the USB stick
+</p>
+</li>
+<li>
+<p>
+setup the persistent data partition
+</p>
+</li>
+<li>
+<p>
+test
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>Reading <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a> might help getting the big picture.</p></div>
+<div class="paragraph"><p>It should be understood that <em>FreeDOO</em> can be booted in two ways :</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+through an image with the help of <em>memdisk</em>,
+</p>
+</li>
+<li>
+<p>
+“natively” from its partition.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>The second way has the major advantage of being very convenient when there is new firmware upgrade; just drop it into the <em>/payload/</em> directory of the <em>FreeDOS</em> partition.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_usbstick_preparation">3. USB stick preparation</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_goal">3.1. Goal</h3>
+<div class="paragraph"><p>The goal of this part is to set up the USB key</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+to make it ready to host the different solutions we want on it,
+</p>
+</li>
+<li>
+<p>
+to have it booting.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>It is low level work.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_pre_requisites">3.2. Pre-requisites</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Having a USB stick large enough for your needs.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_output">3.3. Output</h3>
+<div class="paragraph"><p>The USB key</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+is structured as defined in
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="#id_bigpicture_bios">[id_bigpicture_bios]</a> for the <em>BIOS</em> version,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_bigpicture_uefi">[id_bigpicture_uefi]</a> for the <em>UEFI</em> version,
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+is booting.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="id_usbstick_preparation_procedure_partition_table_creation">3.4. Procedure – Partition table and partitions creation</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">man parted</td>
+</tr></table>
+</div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Plug the USB stick in a USB port into the machine
+</p>
+</li>
+<li>
+<p>
+Create the partition table and its partitions
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>msdos</em> one
+</p>
+<div class="listingblock">
+<div class="title">parted – Partition table and partitions creation – <em>msdos</em></div>
+<div class="content">
+<pre><code>$ sudo parted --align optimal &lt;device_usbstick&gt;
+GNU Parted 3.2
+Using &lt;device_usbstick&gt;
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mktable msdos
+Warning: The existing disk label on &lt;device_usbstick&gt; will be destroyed and all data on this disk will be lost. Do you want to continue?
+Yes/No? y
+(parted)
+(parted) mkpart primary fat16 2048s 256M
+(parted)
+(parted) mkpart primary ext4 256M 10G
+(parted)
+(parted) mkpart primary ext4 10G 12G
+(parted)
+(parted) set 1 boot on
+(parted)
+(parted) q
+Information: You may need to update /etc/fstab.
+
+$
+$ sudo blkid &lt;device_usbstick&gt;*
+&lt;device_usbstick&gt;: PTUUID="c822a5a3" PTTYPE="dos"
+&lt;device_usbstick&gt;1: LABEL="multiboot" UUID="8CBE-FDF9" TYPE="vfat" PARTUUID="c822a5a3-01"
+&lt;device_usbstick&gt;2: PARTUUID="c822a5a3-02"
+&lt;device_usbstick&gt;3: PARTUUID="c822a5a3-03"
+
+$
+$ sudo parted &lt;device_usbstick&gt; print
+Model: Corsair UFD (scsi)
+Disk &lt;device_usbstick&gt;: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start   End     Size    Type     File system  Flags
+ 1      1049kB  256MB   255MB   primary  fat32        boot, lba
+ 2      256MB   10,0GB  9744MB  primary
+ 3      10,0GB  12,0GB  2000MB  primary
+
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>XOR</strong> <em>GPT</em> one
+</p>
+<div class="listingblock">
+<div class="title">parted – Partition table and partitions creation – <em>gpt</em></div>
+<div class="content">
+<pre><code>$ sudo parted --align minimal &lt;device_usbstick&gt;
+GNU Parted 3.2
+Using &lt;device_usbstick&gt;
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mktable gpt
+Warning: The existing disk label on &lt;device_usbstick&gt; will be destroyed and all data on
+this disk will be lost. Do you want to continue?
+Yes/No? y
+(parted)
+(parted) mkpart primary fat16 0 100MB
+(parted)
+(parted) mkpart primary fat16 100MB 356MB
+(parted)
+(parted) mkpart primary ext4 356MB 10GB
+(parted)
+(parted) mkpart primary ext4 10GB 12GB
+(parted)
+(parted) set 1 esp on
+(parted)
+(parted) set 2 boot on
+(parted)
+(parted) q
+Information: You may need to update /etc/fstab.
+$
+$ sudo blkid &lt;device_usbstick&gt;*
+&lt;device_usbstick&gt;: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
+&lt;device_usbstick&gt;1: PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
+&lt;device_usbstick&gt;2: PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
+&lt;device_usbstick&gt;3: PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
+&lt;device_usbstick&gt;4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+$
+$ sudo parted &lt;device_usbstick&gt; print
+Model: Corsair UFD (scsi)
+Disk &lt;device_usbstick&gt;: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags:
+
+Number  Start   End     Size    File system  Name     Flags
+ 1      17,4kB  100MB   100MB                primary  boot, esp
+ 2      100MB   356MB   256MB                primary  boot, esp
+ 3      356MB   10,0GB  9644MB               primary
+ 4      10,0GB  12,0GB  2000MB  ext4         primary
+
+$</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_usbstick_preparation_procedure_filesystem_creation">3.5. Procedure – Filesystem creation</h3>
+<div class="paragraph"><p><em>Fat16</em> is the recommended choice for <em>FreeDOS</em>, <em>Fat32</em> being hard to boot from)<span class="footnote"><br />[<a href="http://www.freedos.org/wiki/index.php/Install#Installing_on_a_physical_PC">http://www.freedos.org/wiki/index.php/Install#Installing_on_a_physical_PC</a>]<br /></span>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Tip" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title">Filesystem check</div>
+<div class="paragraph"><p>Add the option <em>-cc</em> to have the filesystem thoroughly checked.</p></div>
+<div class="paragraph"><p>Not done in the documentation as it takes too much time and commands must be copied/pasted to be tested.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Create filesystems on existing partitions
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+on <em>msdos</em> partition table
+</p>
+<div class="listingblock">
+<div class="title">mkfs – Filesystem creation – <em>msdos</em></div>
+<div class="content">
+<pre><code>$ sudo mkfs.fat -v -n multib_free &lt;device_usbstick&gt;1
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+&lt;device_usbstick&gt;1 has 64 heads and 32 sectors per track,
+hidden sectors 0x0800;
+logical sector size is 512,
+using 0xf8 media descriptor, with 497664 sectors;
+drive number 0x80;
+filesystem has 2 16-bit FATs and 8 sectors per cluster.
+FAT size is 248 sectors, and provides 62141 clusters.
+There is 1 reserved sector.
+Root directory contains 512 slots and uses 32 sectors.
+Volume ID is bdc3a6ca, volume label multib_free.
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_main &lt;device_usbstick&gt;2
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_main
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+595680 inodes, 2379008 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2436890624
+73 block groups
+32768 blocks per group, 32768 fragments per group
+8160 inodes per group
+Filesystem UUID: e5b1bee9-96e2-4e82-aae1-339cbbd6050c
+Superblock backups stored on blocks:
+   32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_data &lt;device_usbstick&gt;3
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_data
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+122160 inodes, 488192 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=503316480
+15 block groups
+32768 blocks per group, 32768 fragments per group
+8144 inodes per group
+Filesystem UUID: a3d0006b-088e-4015-9773-9f0db2d51658
+Superblock backups stored on blocks:
+   32768, 98304, 163840, 229376, 294912
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+$
+$
+$ sudo blkid &lt;device_usbstick&gt;*
+&lt;device_usbstick&gt;: PTUUID="c822a5a3" PTTYPE="dos"
+&lt;device_usbstick&gt;1: SEC_TYPE="msdos" LABEL="multib_free" UUID="BDC3-A6CA" TYPE="vfat" PARTUUID="c822a5a3-01"
+&lt;device_usbstick&gt;2: LABEL="multib_main" UUID="e5b1bee9-96e2-4e82-aae1-339cbbd6050c" TYPE="ext4" PARTUUID="c822a5a3-02"
+&lt;device_usbstick&gt;3: LABEL="multib_data" UUID="a3d0006b-088e-4015-9773-9f0db2d51658" TYPE="ext4" PARTUUID="c822a5a3-03"
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>XOR</strong> on <em>GPT</em> partition table
+</p>
+<div class="listingblock">
+<div class="title">mkfs – Filesystem creation – <em>gpt</em></div>
+<div class="content">
+<pre><code>$ sudo mkfs.fat -v -n multib_esp &lt;device_usbstick&gt;1
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+&lt;device_usbstick&gt;1 has 64 heads and 32 sectors per track,
+hidden sectors 0x0022;
+logical sector size is 512,
+using 0xf8 media descriptor, with 195279 sectors;
+drive number 0x80;
+filesystem has 2 16-bit FATs and 4 sectors per cluster.
+FAT size is 192 sectors, and provides 48715 clusters.
+There is 1 reserved sector.
+Root directory contains 512 slots and uses 32 sectors.
+Volume ID is dcbebb01, volume label multib_esp .
+$
+$ sudo mkfs.fat -v -F 32 -n multib_free &lt;device_usbstick&gt;2
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+&lt;device_usbstick&gt;2 has 64 heads and 32 sectors per track,
+hidden sectors 0x2faf1;
+logical sector size is 512,
+using 0xf8 media descriptor, with 500000 sectors;
+drive number 0x80;
+filesystem has 2 32-bit FATs and 1 sector per cluster.
+FAT size is 3846 sectors, and provides 492276 clusters.
+There are 32 reserved sectors.
+Volume ID is def41e1d, volume label multib_free.
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_main &lt;device_usbstick&gt;3
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_main
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+588672 inodes, 2354492 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2411724800
+72 block groups
+32768 blocks per group, 32768 fragments per group
+8176 inodes per group
+Filesystem UUID: 28345150-0177-4076-89a5-38b7fdff26c4
+Superblock backups stored on blocks:
+   32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+$
+$ sudo parted &lt;device_usbstick&gt; print
+Model: Corsair UFD (scsi)
+Disk &lt;device_usbstick&gt;: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags:
+
+Number  Start   End     Size    File system  Name     Flags
+ 1      17,4kB  100MB   100MB   fat16        primary  boot, esp
+ 2      100MB   356MB   256MB   fat32        primary  boot, esp
+ 3      356MB   10,0GB  9644MB  ext4         primary
+ 4      10,0GB  12,0GB  2000MB  ext4         primary
+
+$
+$ sudo blkid &lt;device_usbstick&gt;*
+&lt;device_usbstick&gt;: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
+&lt;device_usbstick&gt;1: SEC_TYPE="msdos" LABEL="multib_esp" UUID="DCBE-BB01" TYPE="vfat" PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
+&lt;device_usbstick&gt;2: LABEL="multib_free" UUID="DEF4-1E1D" TYPE="vfat" PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
+&lt;device_usbstick&gt;3: LABEL="multib_main" UUID="28345150-0177-4076-89a5-38b7fdff26c4" TYPE="ext4" PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
+&lt;device_usbstick&gt;4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+$</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_usbstick_preparation_procedure_grub_installation">3.6. Procedure – <em>Grub</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Install <em>Grub2</em> on the USB stick
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+for <em>BIOS</em> version
+</p>
+<div class="listingblock">
+<div class="title">grub – <em>Grub2</em> installation – <em>i386-pc</em> (on <em>msdos</em> partition table)</div>
+<div class="content">
+<pre><code>$ sudo mount &lt;device_usbstick&gt;2 &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep &lt;device_usbstick&gt;
+&lt;device_usbstick&gt;2 on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
+$
+$ sudo grub-install --verbose --target=i386-pc --recheck --boot-directory=&lt;dir_mount_usbstick_main&gt;/boot &lt;device_usbstick&gt;
+Installing for i386-pc platform.
+[…]
+grub-install: info: copying `/usr/lib/grub/i386-pc/loopback.mod' -&gt; `&lt;dir_mount_usbstick_main&gt;/grub/i386-pc/loopback.mod'.
+[…]
+grub-install: info: &lt;device_usbstick&gt;2 is not present.
+grub-install: info: Looking for &lt;device_usbstick&gt;2.
+grub-install: info: &lt;device_usbstick&gt; is a parent of &lt;device_usbstick&gt;2.
+grub-install: info: &lt;device_usbstick&gt;2 starts from 499712.
+grub-install: info: opening the device hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/&lt;device_usbstick&gt; is 62652416.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/&lt;device_usbstick&gt; is 62652416.
+grub-install: info: Scanning for DISKFILTER devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: Scanning for mdraid1x devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: Scanning for mdraid09_be devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: Scanning for mdraid09 devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: Scanning for dmraid_nv devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: Scanning for ldm devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: scanning hostdisk/&lt;device_usbstick&gt; for LDM.
+grub-install: info: no LDM signature found.
+grub-install: info: Scanning for lvm devices on disk hostdisk/&lt;device_usbstick&gt;.
+grub-install: info: no LVM signature found.
+[…]
+grub-install: info: grub-mkimage --directory '/usr/lib/grub/i386-pc' --prefix '(,msdos2)/boot/grub' --output '&lt;dir_mount_usbstick_main&gt;/boot/grub/i386-pc/core.img' --format 'i386-pc' --compression 'auto'  'ext2' 'part_msdos' 'biosdisk'
+.
+grub-install: info: the total module size is 0x3bfc.
+grub-install: info: reading /usr/lib/grub/i386-pc/kernel.img.
+grub-install: info: locating the section .text at 0x0.
+grub-install: info: locating the section .rodata at 0x54d4.
+grub-install: info: locating the section .data at 0x6480.
+grub-install: info: locating the section .bss at 0x6c08.
+grub-install: info: reading /usr/lib/grub/i386-pc/fshelp.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/ext2.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/part_msdos.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/biosdisk.mod.
+grub-install: info: kernel_img=0x24ddab0, kernel_size=0x6c08.
+grub-install: info: the core size is 0x5527.
+grub-install: info: reading /usr/lib/grub/i386-pc/lzma_decompress.img.
+grub-install: info: reading /usr/lib/grub/i386-pc/diskboot.img.
+grub-install: info: writing 0x200 bytes.
+grub-install: info: writing 0x6067 bytes.
+grub-install: info: copying `/usr/lib/grub/i386-pc/boot.img' -&gt; `&lt;dir_mount_usbstick_main&gt;/boot/grub/i386-pc/boot.img'.
+grub-install: info: grub-bios-setup  --verbose     --directory='&lt;dir_mount_usbstick_main&gt;/boot/grub/i386-pc' --device-map='&lt;dir_mount_usbstick_main&gt;/boot/grub/device.map' '&lt;device_usbstick&gt;'.
+grub-install: info: reading &lt;dir_mount_usbstick_main&gt;/boot/grub/i386-pc/boot.img.
+grub-install: info: reading &lt;dir_mount_usbstick_main&gt;/boot/grub/i386-pc/core.img.
+grub-install: info: root is `(null)', dest is `hostdisk/&lt;device_usbstick&gt;'.
+grub-install: info: Opening dest.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/&lt;device_usbstick&gt; is 62652416.
+grub-install: info: &lt;device_usbstick&gt;2 is present.
+[…]
+grub-install: info: saving &lt;98,0,512&gt;.
+grub-install: info: saving &lt;99,0,512&gt;.
+grub-install: info: saving &lt;100,0,512&gt;.
+Installation finished. No error reported.
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>XOR</strong> for <em>UEFI</em>
+</p>
+<div class="listingblock">
+<div class="title">grub – <em>Grub2</em>installation –  <em>x86_64-efi</em> (on <em>GPT</em> partition table)</div>
+<div class="content">
+<pre><code>$ sudo mount &lt;device_usbstick&gt;3 &lt;dir_mount_usbstick_main&gt;
+$
+$ sudo mkdir -v -p &lt;dir_mount_usbstick_main&gt;/boot/efi
+mkdir: created directory '&lt;dir_mount_usbstick_main&gt;/boot'
+mkdir: created directory '&lt;dir_mount_usbstick_main&gt;/boot/efi'
+$
+$ sudo mount &lt;device_usbstick&gt;1 &lt;dir_mount_usbstick_main&gt;/boot/efi
+$
+$ mount | grep &lt;device_usbstick&gt;
+&lt;dir_usbstick_partition_main&gt; on &lt;dir_mount_usbstick_main&gt; type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+&lt;dir_usbstick_partition_esp&gt; on &lt;dir_mount_usbstick_main&gt;/boot/efi type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$
+$ sudo grub-install --verbose --target=x86_64-efi --no-floppy --removable --recheck --boot-directory=&lt;dir_mount_usbstick_main&gt;/boot --efi-directory=&lt;dir_mount_usbstick_main&gt;/boot/efi &lt;device_usbstick&gt;
+[…]
+Installation finished. No error reported.
+$</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title"><em>--removable</em> option</div>
+<div class="paragraph"><p>The <em>Grub2</em> man page regarding the option <em>--removable</em> is stating “the installation device is removable. This option is only available on EFI.".</p></div>
+<div class="paragraph"><p>Nevertheless, using it with <em>--target=i386-pc</em> does not (as far as I can say) trigger any warning or error message.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Tip" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title"><em>Grub2</em> and post-MBR / pre-partition space</div>
+<div class="paragraph"><p><em>Grub2</em> needs some space to store its files. On <em>msdos</em> partition table with a <em>master boot record</em> (<em>MBR</em>) there are two possibilities<span class="footnote"><br />[<em><a href="https://www.gnu.org/software/grub/manual/html_node/BIOS-installation.html#BIOS-installation">https://www.gnu.org/software/grub/manual/html_node/BIOS-installation.html#BIOS-installation</a></em>]<br /></span>. As we want to install it before the first partition, one need a bit (at least 31 kB) of space before this first partition.</p></div>
+<div class="paragraph"><p>Therefore, if one does not push back the begining of the first partition (that might be done “automagically” by some partitioning tools to align things properly), <em>Grub</em> will not install and report the following error</p></div>
+<div class="quoteblock">
+<div class="content">
+<div class="paragraph"><p>grub-install: warning: this msdos-style partition label has no post-MBR gap; embedding won&#8217;t be possible.
+grub-install: warning: Embedding is not possible.  GRUB can only be installed in this setup by using blocklists.  However, blocklists are UNRELIABLE and their use is discouraged..
+grub-install: error: will not proceed with blocklists.</p></div>
+</div>
+<div class="attribution">
+<em>error message “no post-MBR gap”</em><br />
+&#8212; Grub2
+</div></div>
+<div class="paragraph"><p>This is when having the following partition alignment:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>Sector size (logical/physical): 512B/512B$
+Partition Table: msdos$
+Disk Flags:⋅$
+$
+Number  Start  End     Size    Type     File system  Flags$
+ 1      512B   32,1GB  32,1GB  primary               boot, lba</code></pre>
+</div></div>
+<div class="paragraph"><p>Whereas with a <em>start</em> at <em>1049kB</em> (or 2048 sectors), <em>Grub</em> is not complaining anymore.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Caution" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title"><em>Grub2</em> <em>--boot-directory</em> or <em>--root-directory</em></div>
+<div class="paragraph"><p>In the man page of <em>Grub2</em>, only <em>--boot-directory</em> is listed.</p></div>
+<div class="paragraph"><p>In the man page of <em>Grub-legacy</em> (v.0.97)<span class="footnote"><br />[<em><a href="https://www.gnu.org/software/grub/manual/legacy/grub.html#Invoking-grub_002dinstall">https://www.gnu.org/software/grub/manual/legacy/grub.html#Invoking-grub_002dinstall</a></em>]<br /></span>, <em>--boot-directory</em> does not exist but there is a <em>--root-directory</em> option.</p></div>
+<div class="paragraph"><p>Man pages are saying:</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>0.97</em>:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--root-directory=dir
+    Install GRUB images under the directory dir instead of the root directory. This option is useful when you want to install GRUB into a separate partition or a removable disk. Here is an example in which you have a separate boot partition which is mounted on /boot: grub-install --root-directory=/boot hd0</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+deb:<em>2.02~beta2-26</em>:
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>--boot-directory=DIR
+    install GRUB images under the directory DIR/grub instead of the boot/grub directory.</code></pre>
+</div></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>The main difference between <em>--boot-directory</em> and <em>--root-directory</em> is that (as explained by the man page):</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>--root-directory</em> is creating the <em>/boot</em> directory on <code>&lt;device_usbstick&gt;</code> so we have <em>/boot/grub</em> on <code>&lt;device_usbstick&gt;</code>
+</p>
+</li>
+<li>
+<p>
+whereas <em>--boot-directory</em> does <strong>not</strong> create the <em>/boot</em>  directory – unless one specifies it, of course – so we have <em>/grub</em> on <code>&lt;device_usbstick&gt;</code>.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>So why has <em>--root-directory</em> disapeared from <em>Grub2</em> man page but can still be used?</p></div>
+</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="id_usbstick_preparation_procedure_directory_structure_creation">3.7. Procedure – Directory structure creation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Create directories required by following step <a href="#id_installation_livesystem">[id_installation_livesystem]</a>
+</p>
+<div class="listingblock">
+<div class="title">shell – Create required directories</div>
+<div class="content">
+<pre><code>$ mount | grep &lt;device_usbstick&gt;
+&lt;dir_usbstick_partition_main&gt; on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
+$
+$ sudo mkdir -v -p &lt;dir_mount_usbstick_main&gt;/boot/iso
+mkdir: created directory ‘&lt;dir_mount_usbstick_main&gt;/boot/iso’
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Check the directory structure
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+for the <em>BIOS</em> version
+</p>
+<div class="listingblock">
+<div class="title">tree – check directory structure – bios</div>
+<div class="content">
+<pre><code>$ sudo tree &lt;dir_mount_usbstick_main&gt;/
+&lt;dir_mount_usbstick_main&gt;
+├── boot
+│   ├── grub
+│   │   ├── fonts
+│   │   │   └── unicode.pf2
+│   │   ├── grubenv
+│   │   ├── i386-pc
+│   │   │   ├── 915resolution.mod
+[…]
+│   │   │   └── zfs.mod
+│   │   └── locale
+│   │       └── fr.mo
+│   └── iso
+└── lost+found
+
+7 directories, 274 files
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+<strong>XOR</strong> for the <em>UEFI</em> version
+</p>
+<div class="listingblock">
+<div class="title">tree – check directory structure – uefi</div>
+<div class="content">
+<pre><code>$ sudo tree &lt;dir_mount_usbstick_main&gt;/
+&lt;dir_mount_usbstick_main&gt;
+├── boot
+│   ├── efi
+│   ├── grub
+│   │   ├── fonts
+│   │   │   └── unicode.pf2
+│   │   ├── grubenv
+│   │   ├── locale
+│   │   │   ├── ast.mo
+[…]
+│   │   │   └── zh_TW.mo
+│   │   └── x86_64-efi
+│   │       ├── acpi.mod
+[…]
+│   │       └── zfs.mod
+│   └── iso
+└── lost+found
+
+8 directories, 296 files
+$</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_clean">3.8. Clean</h3>
+<div class="paragraph"><p>n/a</p></div>
+</div>
+<div class="sect2">
+<h3 id="_q_amp_a">3.9. Q&amp;A</h3>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_installation_livesystem">4. Installation of live systems</h2>
+<div class="sectionbody">
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">This part is independent of the <em>BIOS</em> / <em>UEFI</em> choice.</td>
+</tr></table>
+</div>
+<div class="sect2">
+<h3 id="_goal_2">4.1. Goal</h3>
+<div class="paragraph"><p>This part presents how to install live systems one wants to boot from the USB stick (as defined in <a href="#id_preamble_goal">[id_preamble_goal]</a>).</p></div>
+<div class="paragraph"><p>So there is a procedure for each system:</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<a href="#id_installation_procedure_systemrescuecd">[id_installation_procedure_systemrescuecd]</a>,
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_pre_requisites_2">4.2. Pre-requisites</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+the USB stick ready (see <a href="#id_usbstick_preparation">[id_usbstick_preparation]</a>),
+</p>
+</li>
+<li>
+<p>
+the required system (ISO) images with their hash or signature checked and validated.
+</p>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title">Hash and signature validation</div>
+<div class="paragraph"><p>This documentation will not explain how to check and validate hashes or signatures as this information is provided in a format varying from one source to another.</p></div>
+</td>
+</tr></table>
+</div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_output_2">4.3. Output</h3>
+<div class="ulist compact"><ul>
+<li>
+<p>
+The USB stick with
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+required live systems (including <em>FreeDOS</em>)
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+all images are in the directory <em>/boot/iso/</em>,
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>memdisk</em> in the directory <em>/boot/</em>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="id_installation_procedure_systemrescuecd">4.4. Procedure – <em>SystemRescueCD</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Mount the USB stick <em>main</em> partition
+</p>
+<div class="listingblock">
+<div class="title">mount – mount <em>main</em> partition</div>
+<div class="content">
+<pre><code>$ sudo mount /dev/sdb2 &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep sdb2
+/dev/sdb2 on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Copy the <em>SystemRescueCD</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – <em>SystemRescueCD</em> copy to <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/systemrescuecd* &lt;dir_mount_usbstick_main&gt;/boot/iso
+FIXME
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep systemres
+FIXME
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate the checksums
+</p>
+<div class="listingblock">
+<div class="title">sha256 – Validate hashes</div>
+<div class="content">
+<pre><code>$ sudo sha256sum &lt;dir_mount_usbstick_main&gt;/boot/iso/systemrescuecd-x86-4.5.3.iso
+16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3  &lt;dir_mount_usbstick_main&gt;/iso/systemrescuecd-x86-4.5.3.iso
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_installation_procedure_tails">4.5. Procedure – <em>Tails</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>Tails</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – Copy <em>Tails</em>  image onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/tails-i386-1.4.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso/
+sending incremental file list
+&gt;f+++++++++ tails-i386-1.4.iso
+&gt;f+++++++++ tails-i386-1.4.iso.sig
+
+sent 970.82M bytes  received 54 bytes  29.87M bytes/sec
+total size is 970.58M  speedup is 1.00
+$
+$ ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep tail
+total 2,1G
+-rwxr-x--x 1 lerouge lerouge 926M juil. 13 17:45 tails-i386-1.4.iso*
+-rwxr-x--x 1 lerouge lerouge  801 juil. 13 17:45 tails-i386-1.4.iso.sig
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_installation_procedure_gparted">4.6. Procedure – <em>GParted</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>GParted</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – <em>GParted</em> copy to <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/gparted-live* &lt;dir_mount_usbstick_main&gt;/boot/iso
+FIXME
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep gparted
+FIXME
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate checksums
+</p>
+<div class="listingblock">
+<div class="title">sha256 – Validate hashes</div>
+<div class="content">
+<pre><code>$ cd &lt;dir_mount_usbstick_main&gt;/boot/iso
+$
+$ sudo sha256sum -c gparted-live.checksum
+sha256sum: gparted-live-0.22.0-2-amd64.iso: No such file or directory
+gparted-live-0.22.0-2-amd64.iso: FAILED open or read
+gparted-live-0.22.0-2-i586.iso: OK
+sha256sum: gparted-live-0.22.0-2-i686-pae.iso: No such file or directory
+gparted-live-0.22.0-2-i686-pae.iso: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-amd64.zip: No such file or directory
+gparted-live-0.22.0-2-amd64.zip: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-i586.zip: No such file or directory
+gparted-live-0.22.0-2-i586.zip: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-i686-pae.zip: No such file or directory
+gparted-live-0.22.0-2-i686-pae.zip: FAILED open or read
+sha256sum: WARNING: 14 lines are improperly formatted
+sha256sum: WARNING: 5 listed files could not be read
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="id_installation_procedure_freedos">4.7. Procedure – <em>FreeDOS</em> installation</h3>
+<div class="olist arabic compact"><div class="title">Roadmap</div><ol class="arabic">
+<li>
+<p>
+generate a <em>FreeDOS</em> image,
+</p>
+</li>
+<li>
+<p>
+copy this <em>FreeDOS</em> image onto the USB stick,
+</p>
+</li>
+<li>
+<p>
+copy <em>memdisk</em> onto the USB stick.
+</p>
+</li>
+</ol></div>
+<div class="olist arabic compact"><div class="title">Detail</div><ol class="arabic">
+<li>
+<p>
+Generate a <em>FreeDOS</em>image
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+follow <em>Timetombs – Tip – Unix – System administration – USB key boot for bios upgrade (with </em>FreeDOS<em>)</em> documentation
+</p>
+</li>
+<li>
+<p>
+have its output ready: <em>freetown-boot-freedos-iris.img</em>,
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Copy the generated <em>FreeDOS</em> image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – Copy the <em>FreeDOS</em> image onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/tails-i386-1.4.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso/
+sending incremental file list
+FIXME
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Copy <em>memdisk</em> onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">Shell – Copy <em>memdisk</em> onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo cp /usr/lib/syslinux/memdisk &lt;dir_mount_usbstick_main&gt;/boot
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot
+total 44
+drwxr-x--x 4 root root  4096 juil. 14 21:09 .
+drwxr-xr-x 4 root root  4096 juil. 14 20:51 ..
+drwxr-x--x 5 root root  4096 juil. 14 20:51 grub
+drwxr-x--x 2 root root  4096 juil. 14 21:08 iso
+-rw-r----- 1 root root 25372 juil. 14 21:09 memdisk
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+<div class="paragraph"><p>FIXME- not totally sure one needs the deb:<em>syslinux-common</em>  as there is a Grub2 module <em>memdisk</em> -FIXME</p></div>
+<div class="sect3">
+<h4 id="id_installation_procedure_debian">4.7.1. Procedure – <em>Debian</em> installation</h4>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content"><em>Debian</em> means here the <em>Debian installer</em>.</td>
+</tr></table>
+</div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>Debian</em> <em>NetInstaller</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – copy <em>debian installer</em> image to <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian-8.1.0-amd64-i386-netinst.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso
+sending incremental file list
+&gt;f+++++++++ debian-8.1.0-amd64-i386-netinst.iso
+
+sent 582.10M bytes  received 35 bytes  68.48M bytes/sec
+total size is 581.96M  speedup is 1.00
+$
+$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian/SHA* &lt;dir_mount_usbstick_main&gt;/boot/iso
+sending incremental file list
+&gt;f+++++++++ SHA1SUMS
+&gt;f+++++++++ SHA1SUMS.sign
+&gt;f+++++++++ SHA256SUMS
+&gt;f+++++++++ SHA256SUMS.sign
+&gt;f+++++++++ SHA512SUMS
+&gt;f+++++++++ SHA512SUMS.sign
+
+sent 3.21K bytes  received 130 bytes  6.69K bytes/sec
+total size is 2.80K  speedup is 0.84
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep debian
+FIXME
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate checksums
+</p>
+<div class="listingblock">
+<div class="title">sha256 – Validate hashes</div>
+<div class="content">
+<pre><code>$ cd &lt;dir_mount_usbstick_main&gt;/boot/iso
+$
+$ sudo sha256sum -c gparted-live.checksum
+FIXME
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Get the <em>initrd</em> from <em>hd-media</em> type installer
+</p>
+<div class="listingblock">
+<div class="content">
+<pre><code>FIXME
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-i386/current/images/hd-media/initrd.gz install.386
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-i386/current/images/hd-media/gtk/initrd.gz install.386/gtk
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-amd64/current/images/hd-media/initrd.gz install.amd
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-amd64/current/images/hd-media/gtk/initrd.gz install.amd/gtk</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Copy <em>initrd</em> from <em>hd-media</em> type installer onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – copy <em>initrd.gz</em>s to <code>&lt;device_usbstick&gt;</code><em>/boot/debian</em></div>
+<div class="content">
+<pre><code>$ sudo mkdir &lt;dir_mount_usbstick_main&gt;/boot/debian
+$
+$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian/install.* &lt;dir_mount_usbstick_main&gt;/boot/debian
+sending incremental file list
+cd+++++++++ install.386/
+&gt;f+++++++++ install.386/initrd.gz
+cd+++++++++ install.386/gtk/
+&gt;f+++++++++ install.386/gtk/initrd.gz
+cd+++++++++ install.amd/
+&gt;f+++++++++ install.amd/initrd.gz
+cd+++++++++ install.amd/gtk/
+&gt;f+++++++++ install.amd/gtk/initrd.gz
+
+sent 72.52M bytes  received 120 bytes  48.34M bytes/sec
+total size is 72.50M  speedup is 1.00
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/debian</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="id_installation_porocedure_kali">4.7.2. Procedure – <em>Kali</em> installation</h4>
+<div class="paragraph"><p>FIXME</p></div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Un-mount the USB stick <em>main</em> partition
+</p>
+<div class="listingblock">
+<div class="title">mount – umount <em>main</em> partition</div>
+<div class="content">
+<pre><code>$ sudo umount &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep &lt;device_usbstick&gt;
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_clean_2">4.8. Clean</h3>
+<div class="paragraph"><p>n/a</p></div>
+</div>
+<div class="sect2">
+<h3 id="_q_amp_a_2">4.9. Q&amp;A</h3>
+<div class="paragraph"><p>n/a</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_freedos">5. <em>FreeDOS</em> installation</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_goal_3">5.1. Goal</h3>
+<div class="paragraph"><p>The goal of this step is to add a booting <em>FreeDOS</em> partition so that one can drop required payload into it (easier than editing the image).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_pre_requisites_3">5.2. Pre-requisites</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+the USB stick ready (see <a href="#id_usbstick_preparation">[id_usbstick_preparation]</a>),
+</p>
+</li>
+<li>
+<p>
+the staging part of the <em>FreeDOS</em> image generation (as explained in the document <em>Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with </em>FreeDOS<em>)</em>.
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_procedure_em_freedos_em_installation">5.3. Procedure – <em>FreeDOS</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Mount the USB stick <em>freedos</em> partition
+</p>
+<div class="listingblock">
+<div class="title">mount – mount <em>freedos</em> partition</div>
+<div class="content">
+<pre><code>$ sudo mount /dev/sdb1 &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep sdb1
+/dev/sdb1 on &lt;dir_mount_usbstick_main&gt; type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Copy the content of <em>FreeDOS</em> from the staging area over to the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – copy from the directory <code>&lt;dir_freedos_staging&gt;</code> onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihL ~/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/ &lt;dir_mount_usbstick_main&gt;
+sending incremental file list
+&gt;f+++++++++ BACKUP-autoexec.bat-origin
+&gt;f+++++++++ BACKUP-config.sys-origin
+&gt;f+++++++++ BACKUP-syslinux.cfg-origin
+&gt;f+++++++++ autoexec.bat
+&gt;f+++++++++ config.sys
+&gt;f+++++++++ syslinux.cfg
+cd+++++++++ fdos/
+&gt;f+++++++++ fdos/LOCALIZE.txt
+[…]
+cd+++++++++ fdos/packages/unfmtx/
+cd+++++++++ img/
+&gt;f+++++++++ img/fdodin06.144
+&gt;f+++++++++ img/memdisk
+&gt;f+++++++++ img/memtest.bin
+&gt;f+++++++++ payload/gpg-dell-download-public_key.gpg
+&gt;f+++++++++.payload/gpg-dell-security-public_key.gpg
+&gt;f+++++++++ payload/bios/PER410-011200.exe
+[…]
+&gt;f+++++++++ payload/sas-nonraid/SASHBA_Firmware_6GBPS-SAS-HBA_07.03.06.00_A11_ZPE.exe
+cd+++++++++ syslinux/
+&gt;f+++++++++ syslinux/cat.c32
+&gt;f+++++++++ syslinux/chain.c32
+[…]
+&gt;f+++++++++ syslinux/whichsys.c32
+&gt;f+++++++++ syslinux/zzjson.c32
+
+sent 140.60M bytes  received 15.67K bytes  93.74M bytes/sec
+total size is 140.51M  speedup is 1.00
+$
+$ tree &lt;dir_mount_usbstick_main&gt;
+&lt;dir_mount_usbstick_main&gt;
+├── autoexec.bat
+├── BACKUP-autoexec.bat-origin
+├── BACKUP-config.sys-origin
+├── BACKUP-syslinux.cfg-origin
+├── config.sys
+├── fdos
+│   ├── appinfo
+│   │   ├── append.lsm
+[…]
+│   │   └── xmgr.lsm
+│   ├── autoexec.txt
+│   ├── bin
+│   │   ├── 4DOS.COM
+[…]
+│   │   └── zip.exe
+│   ├── config.txt
+│   ├── cpi
+│   │   ├── ega10.cpx
+[…]
+│   │   └── ega.cpx
+│   ├── doc
+[…]
+│   ├── help
+[…]
+│   ├── LOCALIZE.txt
+│   ├── mtcp.cfg
+│   ├── nls
+[…]
+│   ├── packages
+[…]
+│   ├── postinst.bat
+│   └── postset.bat
+├── img
+│   ├── fdodin06.144
+│   ├── memdisk
+│   └── memtest.bin
+├── payload
+│   ├── bios
+│   │   ├── PER410-011200.exe
+│   │   └── PER410_BIOS 01 12 00 Release Notes.txt
+│   ├── chipset
+│   │   ├── INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-original_compressed.exe
+│   │   └── INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-uncompressed.exe
+│   ├── gpg-dell-download-public_key.gpg
+│   ├── gpg-dell-security-public_key.gpg
+│   ├── idrac
+│   │   ├── ESM_Firmware_78M0V_LN32_1.98_A00.BIN
+│   │   ├── ESM_Firmware_78M0V_LN32_1.98_A00.BIN.sign
+│   │   ├── iDRAC6_1.98_A00.exe
+│   │   └── iDRAC6_1.98_A00_ReleaseNotes.pdf
+│   ├── sas-nonraid
+│   │   ├── SASHBA_Firmware_6GBPS-SAS-HBA_07.03.06.00_A11_ZPE.exe
+│   │   ├── SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN
+│   │   └── SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN.sign
+│   └── sas-raid
+├── syslinux
+│   ├── cat.c32
+│   └── zzjson.c32
+[…]
+└── syslinux.cfg
+
+120 directories, 789 files
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Install <em>syslinux</em>
+</p>
+<div class="listingblock">
+<div class="title">syslinux – installation</div>
+<div class="content">
+<pre><code>$ sudo syslinux --directory syslinux --install /dev/sdb1
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Un-mount the USB stick
+</p>
+<div class="listingblock">
+<div class="title">mount – umount <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ umount &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep sdb
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_grub">6. <em>Grub</em> configuration</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_goal_4">6.1. Goal</h3>
+<div class="paragraph"><p>The goal here is to copy onto the USB stick a working <em>Grub2</em> configuration file.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_pre_requisites_4">6.2. Pre-requisites</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+all previous steps,
+</p>
+</li>
+<li>
+<p>
+the <em>Grub2</em> configuration tailored to our needs
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>grub-bios.cfg</em>,
+</p>
+</li>
+<li>
+<p>
+<em>grub-uefi.cfg</em>.
+</p>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_output_3">6.3. Output</h3>
+<div class="ulist compact"><ul>
+<li>
+<p>
+The file <em>grub.cfg</em> is on the USB stick in the <em>/boot/grub/</em> directory.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_procedure_configuration_setup">6.4. Procedure – Configuration setup</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+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" />
+</td>
+<td class="content">
+<div class="title">Not much to do</div>
+<div class="paragraph"><p>There is not much to do in this part as the configuration file is already prepared.</p></div>
+<div class="paragraph"><p>And I do not want to maintain the configuration both in the documentation and in its file.</p></div>
+</td>
+</tr></table>
+</div>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Mount the USB stick <em>main</em> partition
+</p>
+<div class="listingblock">
+<div class="title">mount – mount <em>main</em> partition</div>
+<div class="content">
+<pre><code>$ sudo mount &lt;dir_partition_main&gt; &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep &lt;dir_usbstick_partition_main&gt;
+&lt;dir_usbstick_partition_main&gt; on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Copy the <em>Grub2</em> configuration over to the USB stick
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+for the <em>BIOS</em> version
+</p>
+<div class="listingblock">
+<div class="title">cp – copy <em>grub.cfg</em> into <em>&lt;dir_mount_usbstick_main&gt;/boot/grub/</em> on <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo cp ~/data/timetombs/usbboot/grub-bios.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
+FIXME
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/grub
+total 48
+drwxr-x--x 5 root root  4096 juil. 14 21:11 .
+drwxr-x--x 4 root root  4096 juil. 14 21:09 ..
+drwxr-x--x 2 root root  4096 juil. 14 20:51 fonts
+-rw-r----- 1 root root 13540 juil. 15 12:02 grub.cfg
+-rw-r----- 1 root root  1024 juil. 14 20:51 grubenv
+drwxr-x--x 2 root root 12288 juil. 14 20:51 i386-pc
+drwxr-x--x 2 root root  4096 juil. 14 20:51 locale
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+for the <em>UEFI</em> version
+</p>
+<div class="listingblock">
+<div class="title">cp – copy <em>grub-uefi.cfg</em> into <em>&lt;dir_mount_usbstick_main&gt;/boot/grub/</em> on <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo cp ~/data/timetombs/usbboot/grub-uefi.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
+FIXME
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/grub
+total 48
+drwx------ 5 root root  4096 juil. 16 16:17 .
+drwx------ 5 root root  4096 juil. 16 17:00 ..
+drwx------ 2 root root  4096 juil. 16 15:56 fonts
+-rw-r----- 1 root root 14219 juil. 16 16:56 grub.cfg
+-rw------- 1 root root  1024 juil. 16 15:56 grubenv
+drwx------ 2 root root  4096 juil. 16 15:56 locale
+drwx------ 2 root root 12288 juil. 16 15:56 x86_64-efi
+$</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+un-mount the USB stick
+</p>
+<div class="listingblock">
+<div class="title">mount – unmount <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ sudo umount &lt;dir_mount_usbstick_main&gt;
+$
+$ mount | grep &lt;dir_mount_usbstick_main&gt;
+$</code></pre>
+</div></div>
+</li>
+</ol></div>
+<div class="paragraph"><p> USAGE$
+ Two main ways to set the filesystem encapsulated in an ISO one wants to boot$
+ 1- set it manually$
+    loopback &lt;var&gt; (hdX,&lt;partition_table_type&gt;X)/path/to/iso$
+    then use (&lt;var&gt;) in linux or initrd call$
+ 2- let Grub2 figure it out by looking for UUID$
+    search --no-floppy --fs-uuid --set=&lt;var&gt; &lt;uuid&gt;$
+    then use &lt;var&gt; in the loopback command$
+    if there is no &lt;var&gt; defined after --set option,⋅$
+     then the var <em>root</em> is implicitly used$</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="id_data_partition_setup">7. <em>data</em> partition setup</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_goal_5">7.1. Goal</h3>
+<div class="paragraph"><p>The goal in this part is to setup the third partition to store (persistent) data of the user when he is using of the live systems.</p></div>
+<div class="paragraph"><p>This partition must be encrypted.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_pre_requisites_5">7.2. Pre-requisites</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+the USB stick ready (see <a href="#id_usbstick_preparation">[id_usbstick_preparation]</a>).
+</p>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_output_4">7.3. Output</h3>
+<div class="paragraph"><p>The <em>data</em> partition is</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+encrypted (using <em>LUKS</em>),
+</p>
+</li>
+<li>
+<p>
+with an <em>ext4</em> filesystem.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_procedure_fixme">7.4. Procedure – FIXME</h3>
+<div class="paragraph"><p>FIXME</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_annexes">8. Annexes</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_hashes">8.1. Hashes</h3>
+<div class="sect3">
+<h4 id="_debian">8.1.1. Debian</h4>
+<div class="listingblock">
+<div class="title">8.1 - amd64-i386</div>
+<div class="content">
+<pre><code>6a2c1654ba12f4839da47c8864233870898858ce  debian-8.1.0-amd64-i386-netinst.iso
+
+d8aee537610ca2e87469e61709cd8fca1f7122b999430dfae4bd793ab767bfac  debian-8.1.0-amd64-i386-netinst.iso
+
+0437b63c2b01dcee4b1df8f9bd27a1b28f95c000bb92104463fbed714ff39906e7f36098178864496b83abcf5f4491ef62a1f00fcdb47f700a086ba25ccd5371  debian-8.1.0-amd64-i386-netinst.iso</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_gparted">8.1.2. GParted</h4>
+<div class="listingblock">
+<div class="title">v.0.22.0-2</div>
+<div class="content">
+<pre><code>f52dc7fea44f5895699b58bcd8207cc2ec79f60937ca8452a05907a7960c0d20 gparted-live-0.22.0-2-amd64.iso
+0e85af5db2c82daa1311cce9d3fc779c609e0e0933cad98b21a915f84e8c0fe7 gparted-live-0.22.0-2-i586.iso
+b2f5691b3cb63cd2f0b68795f7344e63be30527a0a1641a7f2ece1efa1746b9f gparted-live-0.22.0-2-i686-pae.iso
+d083c5d4ea6d690c4a3e22832dd54ca94167a546dd922c67e41a1717723b0afa gparted-live-0.22.0-2-amd64.zip
+6415d65f2a337dc9e93a5fa64ad5dd414ea7ea8fd1957ee48f7354466552dcec gparted-live-0.22.0-2-i586.zip
+8c96b3af45be753197a83d615a5bef2a1bdc6249b7d9a1e77cf00e5f245d59a3 gparted-live-0.22.0-2-i686-pae.zip</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_systemrescuecd">8.1.3. SystemRescueCD</h4>
+<div class="listingblock">
+<div class="title">v.4.5.3</div>
+<div class="content">
+<pre><code>16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3 systemrescuecd-x86-4.5.3.iso</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_grml">8.1.4. GRML</h4>
+<div class="listingblock">
+<div class="title">v.2014.11</div>
+<div class="content">
+<pre><code> -----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+ea7204ed77fa3df3a4ed68e3b8e2ad6f95d5242d  grml96-full_2014.11.iso
+ -----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCAAGBQJUZyrIAAoJEJaoeHK36jc39VMP/Rtu+jR30Y4Rq4LSwO0q8fvR
+P/j0ZGd9GcKzgNBMTh/s1Ea+e4g2VCGZSnXktdi/UYAPAjhGyNAeXQ3X2hzLLNaE
+p9hu9BsGxJIIBkYBV45hPtmxXFl+POXFZMacW7nuIqZR2cbBxDbtJQXb4W6iK/Hg
+kwknj9VHlVcU+pg3awUyQJVYPmv30w7CHgiFGG3+KstEYuG4gIRK5ICCu9zit+Rs
+l8M5JPe6PxvOMthhV9yHWm9ue8RL1xFoKkQizuJ7Np16FqPbYOrtgmBl3+vOBl7o
+u1tomtptRE7gZCdVNpwnF8g2RZZusNsXnfzsxR4SJ78KTU9ueoqQVCxWCvnFSzlV
+udCT2sOFBGu8DAMlAJ5ZRRVb/VSARVWCMmn/OhXWFfhdAIEGNYw9DfBqwaKaj8k1
+GRZbtfHnHL6EEHzGWboIDDg2qjEsEJwz9OQXOsvOqds7SiYRglknPy9wMl7O//WX
+g8RkvihoHgYBGHaqxIVeZWAhY8+2y93ZCZyTM5WXvEdYua7X/e/nJyqSrTZXCr3M
+tw3LgxUSzpejdh/mGosEMsY2HXAoE0ruDbB+jmWvGEPxPLQEaYFIjjyenPQtAt5T
+jqlNGAX5oJ3wlMjmXOyylTYgiDHaMSCyFYPC0vpMLtAgsP6d9PwiM/+6/vvDgLkA
+9bmmAI7yg/Rho9hRSlS+
+=6L94
+ -----END PGP SIGNATURE-----</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_clonezilla">8.1.5. Clonezilla</h4>
+<div class="listingblock">
+<div class="title">v.2.4.2-10</div>
+<div class="content">
+<pre><code>941669990fba74ad96fd0dcc899db6d8  clonezilla-live-2.4.2-10-amd64.iso
+b3555c6beb14e66f6aed2e7db1d6f410  clonezilla-live-2.4.2-10-i586.iso
+
+6320c55e63485b590da68484e2f70b920130e68e  clonezilla-live-2.4.2-10-amd64.iso
+e4b20b238972368143a56f2a5aec1916d65f1e93  clonezilla-live-2.4.2-10-i586.iso
+
+671229ed966beca8a59e811e60a37b2088ff9b0e6ee7a0ebb2c0b43fd04d08d8  clonezilla-live-2.4.2-10-amd64.iso
+a320b072593af6b390f213ee326c3aa6aad8ac088e265e8ae1a1301109433687  clonezilla-live-2.4.2-10-i586.iso</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_bug_reports">8.2. Bug reports</h3>
+<div class="sect3">
+<h4 id="_parted">8.2.1. parted</h4>
+<div class="paragraph"><p>In the man page</p></div>
+<div class="ulist compact"><ul>
+<li>
+<p>
+for <em>set</em>, <em>bios_grub</em> is not mentioned
+</p>
+</li>
+<li>
+<p>
+for <em>unit</em>, <em>M</em> instead of <em>MB</em> is working
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+actually it is probably due to the fact that mkpart default in megabytes
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2015-07-16 19:29:53 EDT
+</div>
+</div>
+</body>
+</html>

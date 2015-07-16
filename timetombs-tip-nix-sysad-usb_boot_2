@@ -1,0 +1,2124 @@
+= Timetombs – Tip – Unix – System administration – USB key boot for rescue and more
+:title: Creation of a multi-boot USB stick, including FreeDOS and a crypted partition for persitent data
+:description: This document presents how to setup a multi-boot USB stick loaded with several live systems including FreeDOS, a partition dedicated to FreeDOS and a third one crypted for storing persistent data
+// keywords are taken from the -docinfo.xml document with DocBook toolchain
+:keywords: implementation,usbkey,usb key,usb stick,multi-boot,live system,kali,systemrescuecd,tails,debian,debian installer,grml,gparted,freedos,firmware,fat,msdos,ms-dos,luks,crypted,partition
+:author:    LeRouge
+// activating :revnumber: and :revdate: generate a one line revision history
+//:revnumber: $Id$
+//:revdate:   $Date$
+// set the language for i10n
+:lang: en
+// set the kind of output document [article|book]
+:doctype:   article
+// set if admonition blocs will get an icon (or not)
+:icons:
+// activate the ToC generation (or not!) for article type of document
+//  see common-mine.xsl
+:toc:
+// generate a scrollable table of contents in the left hand margin of an
+// article or book document. Use the max-width attribute to change the content
+// width. In all other respects behaves the same as the toc attribute.
+// For html5 or xhtml11
+//:toc2:
+// integrate (or not!) the <filename>-revhistory.xml file
+//:revisionhistory!:
+// integrate (or not!) the <filename>-docinfo.xml file
+:docinfo!:
+// activate (or not!) numbering of titles set in asciidoc.conf
+:numbered:
+// flag the document as one that must (or not!) inherit IGI1300 instructions
+:igi1300!:
+
+// predefined attribute list
+//  http://asciidoc.org/userguide.html#X74
+//  breakable, unbreakable, footer, header, pgwide options
+//  should be used at the “obejct” granularity
+// Minimizes vertical space in the list
+:compact:
+
+// attribute entities for factorisation
+//  use {<attribute_name>} in the document
+// note: can be factorised in an external file sourced by many files
+:homepage: http://FIXME[]
+
+// Notes regarding attributes
+//  To delete (undefine) an attribute use the following syntax:
+//  :<attribute_name>!:
+
+// set default table format when unspecified
+:tabledef-default.topbot-style: frame="topbot"
+:tabledef-default.style: topbot
+
+
+
+
+
+
+
+
+
+
+
+== Preamble
+
+
+
+Why?
+
+First to reach the goals set below, inspired by my need to update some firmwares which upgrades are only available as __MS-DOS__ binaries and some blog posts by http://www.preining.info/blog/contact/[Norbert Preining].
+
+But also just because I wanted to try. A lot of simpler solutions (everything in __FAT__ for instance) are existing. I wanted to test and have fun :)
+
+Bottom of the line, with __UEFI__ solution, __FreeDOS__ is not working.
+
+And the setup of the __data__ partition is not explained here.
+
+
+
+[[id_preamble_goal]]
+=== Goal / requirements
+
+The goal is the following (as of 2015-06): get a multi-purpose / multi-boot USB stick
+
+. able to boot
+  ** http://www.debian.org/[__Debian__] (actually, the __Debian installer__, aka __DI__, not __Debian Live__),
+  ** https://tails.boum.org/[__Tails__],
+  ** http://www.sysresccd.org/[__System RescueCD__],
+  ** http://gparted.org/[__GParted__],
+  ** https://grml.org/[__GRML__],
+  ** https://www.kali.org/[__Kali__],
+  ** http://clonezilla.org/[__Clonezilla__],
+  ** http://www.freedos.org/[__FreeDOS__] for firmware upgrades,
+
+. on as many machines as possible,
+
+. while being able to securely keep any data generated while using one of those systems,
+
+. and have the solution as easily as possible maintenable (when one of the systems is updated).
+
+
+
+
+
+[[id_preamble_implementation]]
+=== Implementation – Big picture
+
+
+==== Live systems
+
+This requirement is easy to fullfil. One just have to download the wanted systems and store them on the USB stick.
+
+The constraint being the size required. Images to boot are generally under or roughly a 1 Gbyte (the main exception – as of 2015-06 – being __Kali__ that weigths 3,1 Gbytes). So having 4 to 8 Gbytes should be OK (the more space, the more live system images can be stored and therefore booted).
+
+__FreeDOS__ is a bit special as if it is really tiny, it must have some room available to store firmware upgrades. Nowadays, those firmware upgrades can be up to a few tens of mega bytes. So, 256 Mbytes should be OK.
+
+
+==== Machine diversity
+
+Nowadays and roughly since 2011/2012, we have computers using __BIOS__ xor __UEFI__.
+
+Ideally, the same USB stick should be able to boot both kind of machines.
+
+It will not be the case first; the solution will be either a USB stick to boot __BIOS__ machines **xor** __UEFI__ ones (see <<id_bigpicture>> about those two ways). This document might be updated later on with such a solution.
+
+
+==== User data
+
+This requirement is also easy. One will have to add a partition for that. This partition will be crypted using __LUKS__.
+
+A few giga bytes should be enough (for everybody©®™).
+
+
+==== Maintenance
+
+This requirement may be tricky.
+
+Ideally, one should just have to drop a new (updated) ISO on the USB stick. I can see three ways to do that:
+
+. keep the name of the ISO downloaded: this means the links in __Grub2__ configuration must be updated too. The less one touch a configuration file, the better it is.
+
+. keep the name of the ISO downloaded but use symlinks that are the filename used in __Grub2__ configuration. This requires to use a filesystem allowing links (i.e. not __FAT__) and update the symlinks to point to the new ISO file name,
+
+. rename the ISO file downloaded to a given, fixed name.
+
+Even if the solution 1 is the most dangerous, it also allows to update the label of what will be booted. So one will stick with this solution.
+
+So, one will try to (only) use ISO files. But there are two limits:
+
+* all live systems one may want be able to boot might not be bootable as an ISO image,
+* __FreeDOS__ is usefull to execute MS-DOS executables that are firmware upgrades. That means one must not only have __FreeDOS__ but also a payload. And if one use an image for __FreeDOS__ that means that image must be edited each time one need to use a new payload. Even if editing an image might not be that difficult (at least for people accustomed to CLI), that's still another step to follow. So one might try to have a part of the USB stick dedicated to __FreeDOS__ where one would just have to drop the payload.
+
+
+
+[[id_bigpicture_bios]]
+==== Big picture – BIOS only
+
+
+__BIOS__ does not care about __msdos__ or __GPT__ partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).
+
+[WARNING]
+.BIOS only meaning
+==========================================
+By “BIOS only”, one means __Grub2__ version __i386-pc__ (**not** __x86_64-uefi__) and __msdos__ partition table.
+
+This USB stick is made to boot on computer using a __BIOS__ (**not** an __[U]EFI__).
+
+By lack of time and hardware available to test, I gave up the combinaison __BIOS__ / __GPT__ partition table. This has the side advantage to not have to deal with a __BIOS boot partition__footnote:[https://en.wikipedia.org/wiki/BIOS_boot_partition] (aka __EF02__) and its alignment subtilities.
+==========================================
+
+One USB stick with
+
+* a __msdos__ partition table,
+* three partitions,
+ .. __freedos__ partition
+   *** size: 256 Mbytes,
+   *** filesystem:  __fat32__,
+   *** UUID: ++bdc3-a6ca++,
+   *** Grub2 name: __(hd0,msdos1)__
+   *** content:
+      **** __FreeDOS__, in __/fdos/__ directory,
+      **** __syslinux__, in __/syslinux/__ directory,
+      **** other bootable system images, in __/img/__,
+      **** MS-DOS executable payload (typically firmware upgrade MS-DOS binaries), in __/payload/__ directory,
+ .. __main__ partition
+   *** size: 10 Gbytes,
+   *** filesystem: __ext4__,
+   *** UUID: ++e5b1bee9-96e2-4e82-aae1-339cbbd6050c++,
+   *** Grub2 name: __(hd0,msdos2)__,
+   *** content:
+      **** __Grub2__ in __/boot/grub/__,
+      **** any image of live system one wants to boot, in __/boot/iso/__,
+ .. __data__ partition
+   *** size: 2 Gbytes,
+   *** filesystem: __ext4__ in a __LUKS__ cryptocontainer,
+   *** UUID: ++a3d0006b-088e-4015-9773-9f0db2d51658++,
+   *** Grub2 name: __(hd0,msdos3)__,
++
+NOTE: __Grub2__ will not address this partition.
++
+   *** content:
+      **** content the user would like to keep when using a live system (such as __Tails__ or __Kali__).
+
+
+
+
+[[id_bigpicture_uefi]]
+==== Big picture – UEFI
+
+
+One USB stick with
+
+* a __GPT__ partition table,
+* three partitions,
+ .. __EFI system partition__footnote:[https://en.wikipedia.org/wiki/EFI_System_partition] (aka __ESP__) partition
+   *** size: 100 Mbytes,
+   *** filesystem: __fat32__,
+   *** GUID: __C12A7328-F81F-11D2-BA4B-00A0C93EC93B__,
+   *** UUID: ++DCBE-BB01++,
+   *** Grub2 name: __(hd0,gpt1)__,
+   *** content:
+      **** the partition required by __UEFI__ compliant machines,
+      **** boot loader early stuff,
+      **** __UEFI__ stuff…
+ .. __freedos__ partition
+   *** size: 256 Mbytes,
+   *** filesystem:  __fat32__,
+   *** UUID: ++CFCD-03C7++,
+   *** Grub2 name: __(hd0,gpt1)__
+   *** content:
+      **** __FreeDOS__, in __FIXME__,
+      **** MS-DOS executable payload, in __/payload/__,
+ .. __main__ partition
+   *** size: 10 Gbytes,
+   *** filesystem: __ext__,
+   *** UUID: ++28345150-0177-4076-89a5-38b7fdff26c4++,
+   *** Grub2 name: __(hd0,gpt2)__,
+   *** content:
+      **** __Grub2__ in __/boot/grub/__,
+      **** any image one wants to boot, in __/boot/iso/__,
+ .. __data__ partition
+   *** size: 2 Gbytes,
+   *** filesystem: __ext4__ in a _LUKS__ cryptocontainer,
+   *** UUID: ++a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb++,
+   *** Grub2 name: __(hd0,gpt3)__,
++
+NOTE: __Grub2__ will not address this partition.
++
+   *** content:
+      **** content the user would like to keep when using a live system (such as __Tails__ or __Kali__).
+
+
+
+
+
+
+[[id_preamble_prerequisite]]
+=== Pre-requisites
+
+
+==== Hardware
+
+* a USB key of at least 12 Gbytes.
++
+[NOTE]
+.USB stick size
+==========================================
+Size can be adapted.
+
+Less size on the __multib_main__ partition means less live systems available to the end-user.
+
+Less size on the __multib_data__ partition means less available space to the end-user for his persistent data.
+
+Less size on __multib_free__ partition means less available space for the payload (firmware upgrade binaries). This partition being quite small that's probably not the first one to shrink. Note that as this documentation documents a complete copy of __FreeDOS__ onto this partition, its minimal size must be around 150 Mbytes.
+==========================================
+
+
+==== Software
+
+.tools
+//* __ISOmaster__: deb:__isomaster__, v.1.3.9-2
+* __Grub2__:
+ ** __EFI__ version: deb:__grub-efi-amd64__ (2.02\~beta2-26 0)
+ ** __BIOS__ version: deb:__grub-pc__ (2.02\~beta2-26)
+* __mkfs.fat__: deb:__dosfstools__ (3.0.28-1)
+* __syslinux__: deb:__syslinux-common__ (3:6.03+dfsg-7)
+ ** this package provides __memdisk__
+* __rsync__: deb:__rsync__ (3.1.1-3)
+ ** not mandatory as __cp__ can be used
+
+.live systems
+* https://tails.boum.org/[__Tails__]
+ ** http://dl.amnesia.boum.org/tails/stable/tails-i386-1.4/tails-i386-1.4.iso[Tails, v.1.4],
+* http://www.sysresccd.org/[__SystemRescueCD__],
+ ** http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.5.3/systemrescuecd-x86-4.5.3.iso?r=&ts=1434488949&use_mirror=softlayer-dal[]
+* http://gparted.org/[__GNU/Gnome Parted__]
+ ** http://sourceforge.net/projects/gparted/files/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso/download
+ ** http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i586.iso?r=&ts=1434488852&use_mirror=iweb[]
+ ** http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-amd64.iso?r=&ts=1434488893&use_mirror=iweb[]
+ ** http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i686-pae.iso?r=&ts=1434488915&use_mirror=softlayer-dal[]
+* https://www.kali.org/[__Kali__]
+ ** http://cdimage.kali.org/kali-1.1.0a/kali-linux-1.1.0a-amd64.iso[Kali 64b v.1.1.0a]
+* http://www.debian.org/[__Debian__]
+ ** http://cdimage.debian.org/debian-cd/8.1.0/multi-arch/iso-cd/debian-8.1.0-amd64-i386-netinst.iso[]
+* http://grml.org/[__GRML__]
+ ** http://download.grml.org/grml96-full_2014.11.iso[__GRML__64&32b, v. 2014.11]
+ ** http://download.grml.org/grml64-full_2014.11.iso[__GRML__64b, v. 2014.11]
+* http://clonezilla.org/[Clonezilla]
+ ** http://clonezilla.org/downloads/download.php?branch=stable[]
+
+.firmware upgrade binaries
+* depends on your computer model; refer to you manufacturer web site.
+
+
+==== Privileges
+
+* __root__: required to make partition table and filesystem. FIXME- ideally list capabilities required -FIXME
+
+
+==== Configuration
+
+* the __Grub2__ configuration file __grub.cfg__ tailored to our needs.
+
+
+==== Variables
+
+* ++<device_usbstick>++ (++/dev/sdb++): path of the USB stick used on the machine
++
+[CAUTION]
+.USB stick path and data loss
+==========================================
+Do not mess with this path. If you use a wrong value, you will (logically) destroy the device (erase data) if there is one. You will probably read this after you did it… next time RTFM **before** :)
+==========================================
++
+* ++<dir_usbstick_partition_esp>++ (++/dev/sdb1++): path of the __ESP__ partition (__UEFI__ solution)
+* ++<dir_usbstick_partition_freedos>++ (++/dev/sdb1++ for __BIOS__ version and ++/dev/sdb2++ for __UEFI__ version): path of the __FreeDOS__ partition
+* ++<dir_usbstick_partition_main>++ (++/dev/sdb2++ for __BIOS__ version and ++/dev/sdb3++ for __UEFI__ version): path of the __main__ partition
+* ++<dir_usbstick_partition_data>++ (++/dev/sdb3++ for __BIOS__ version and ++/dev/sdb4++ for __UEFI__ version): path of the __data__ partition
+* ++<dir_download>++ (++~/!down++): directory where ISO images are downloaded
+* ++<dir_mount_usbstick_esp++ (++/media/tmp/boot/efi++): directory where the __esp__ partition (see <<id_bigpicture_uefi>>) on our USB stick is mounted
+* ++<dir_mount_usbstick_freedos>++ (++/media/tmp/++): directory where the __freedos__ partition (see <<id_bigpicture_bios>>) on our USB stick is mounted
+* ++<dir_mount_usbstick_main>++ (++/media/tmp/++): directory where the __main__ (see <<id_bigpicture_bios>>) partition on our USB stick is mounted
+* ++<dir_mount_usbstick_data>++ (++/media/tmp/++): directory where the __data__(see <<id_bigpicture_bios>>)  partition on our USB stick is mounted
+* ++<dir_mount_image>++ (++/mnt/tmp/++): directory where (downloaded) ISO images are mounted
+* ++<dir_freedos_staging>++ (++freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/++): directory where the content of __FreeDOS__ image has been extracted and stored and therefore where the __FreeDOS__ image content is prepared
+
+
+
+
+[[id_preamble_source]]
+=== Sources
+
+
+This document is derived from 
+
+* __Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with __FreeDOS__)__,
+* and blog posts by http://www.preining.info/blog/contact/[Norbert Preining]
+ ** http://www.preining.info/blog/2014/05/usb-stick-tails-systemrescuecd/[__USB stick with Tails and SystemRescueCD__ on 2014-05-01],
+ ** http://www.preining.info/blog/2014/12/tails-1-2-1-debian-jessie-installer-system-rescue-cd-usb/[__Tails 1.2.1, Debian jessie installer, System Rescue CD on USB__ on 2014-12-08],
+ ** http://www.preining.info/blog/2015/05/usb-stick-update-tails-debian-gparted-sysrescd/[__USB stick update: TAILS 1.4, GParted 0.22, SysResCD 4.5.2, Debian Jessie__ on 2015-05-28],
+ ** http://www.preining.info/blog/2015/05/usb-stick-update-debian-is-back-plus-grml/[__USB stick update: Debian is back, plus GRML__ on 2015-05-30],
+ ** and http://www.preining.info/software/grub.cfg[his __Grub2__ configuration].
+
+
+
+
+[[id_preamble_ressource]]
+=== Ressources
+
+* https://en.wikipedia.org/wiki/BIOS_Boot_partition[BIOS boot partition]
+* http://dedoimedo.com/computers/grub-2.html[]
+* http://www.syslinux.org/wiki/index.php/MEMDISK[]
+
+==== Grub2
+
+* https://www.gnu.org/software/grub/manual/grub.html[]
+* http://www.linux.org/threads/understanding-the-various-grub-modules.7535/[]
+* http://lukeluo.blogspot.com/2013/06/grub-how-to-4-memdisk-and-loopback.html?_escaped_fragment_=#![]
+* http://rodsbooks.com/gdisk/bios.html[Legacy BIOS Issues with GPT]
+//* http://superuser.com/questions/903112/grub2-install-this-gpt-partition-label-contains-no-bios-boot-partition[]
+* http://ubuntuforums.org/showthread.php?t=1549847[ISO Booting with Grub 2 / #1]
+
+
+==== FreeDOS
+
+* http://www.freedos.org/wiki/index.php/Install[]
+* http://freedos.10956.n7.nabble.com/BIOS-update-with-FreeDOS-grub2-on-USB-Flash-td19717.html[]
+* https://lists.gnu.org/archive/html/help-grub/2012-06/msg00047.html[]
+* http://hype-free.blogspot.com/2008/12/booting-freedos-with-grub.html?m=1[]
+* https://lists.gnu.org/archive/html/help-grub/2012-06/msg00047.html[Re: "freedos" Command HowTo?]
+* http://derek.chezmarcotte.ca/?p=340[FreeDOS 1.1 USB Boot Image]
+* https://lists.gnu.org/archive/html/help-grub/2010-04/msg00012.html[]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_sumup]]
+== Sumup – What to do
+
+
+
+
+For people in a hurry or knowing how to do things, here is a short version of what to do:
+
+. prepare the USB stick
+ ** for the __BIOS__ solution
+  .. create a __msdos__ partition table
+  .. create three partitions
+     ... __fat__, 256 Gbytes for __FreeDOS__
+        **** careful with this partition start place; there must be enough place for __Grub2__ (MBR)
+     ... __ext4__, 10 Gbytes for __Grub2__ and live systems images
+        **** size requirements are function of the number of live systems one wants to be able to boot
+     ... __LUKS__/__ext4__, whatever Gbytes for user's peristent data
+  .. format the first two partitions
+  .. install __Grub2__ onto the USB stick
+ ** for the __UEFI__ solution
+  .. create a __gpt__ partition table
+  .. create four partitions
+     ... __fat__, 100 Gbytes for __UEFI system partition__ (__ESP__),
+     ... __fat__, 256 Gbytes for __FreeDOS__
+     ... __ext4__, 10 Gbytes for __Grub2__ and live systems images
+        **** size requirements are function of the number of live systems one wants to be able to boot
+     ... __LUKS__/__ext4__, whatever Gbytes for user's peristent data
+  .. format the first three partitions
+  .. install __Grub2__ onto the USB stick
+. copy all the wanted live system images onto the USB stick
+  ** __FreeDOS__ image must be pre-built and requires __memdisk__
+  ** __Debian__ requires specific __initrd__ files
+. install __FreeDOS__
+. copy __Grub2__ configuration onto the USB stick
+. setup the persistent data partition
+. test
+
+Reading <<id_bigpicture_bios>> might help getting the big picture.
+
+It should be understood that __FreeDOO__ can be booted in two ways :
+
+. through an image with the help of __memdisk__,
+. “natively” from its partition.
+
+The second way has the major advantage of being very convenient when there is new firmware upgrade; just drop it into the __/payload/__ directory of the __FreeDOS__ partition.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_usbstick_preparation]]
+== USB stick preparation
+
+
+
+
+=== Goal
+
+
+The goal of this part is to set up the USB key
+
+. to make it ready to host the different solutions we want on it,
+. to have it booting.
+
+It is low level work.
+
+
+
+
+=== Pre-requisites
+
+
+. Having a USB stick large enough for your needs.
+
+
+
+
+=== Output
+
+
+The USB key
+
+* is structured as defined in
+ ** <<id_bigpicture_bios>> for the __BIOS__ version,
+ ** <<id_bigpicture_uefi>> for the __UEFI__ version,
+* is booting.
+
+
+
+
+[[id_usbstick_preparation_procedure_partition_table_creation]]
+=== Procedure – Partition table and partitions creation
+
+
+NOTE: man parted
+
+
+. Plug the USB stick in a USB port into the machine
+. Create the partition table and its partitions
+// start: 2048 end: 62652415 size: 62650368 (29.87 GiB)
+ ** __msdos__ one
++
+.parted – Partition table and partitions creation – __msdos__
+------------------------------------------
+$ sudo parted --align optimal <device_usbstick>
+GNU Parted 3.2
+Using <device_usbstick>
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mktable msdos
+Warning: The existing disk label on <device_usbstick> will be destroyed and all data on this disk will be lost. Do you want to continue?
+Yes/No? y
+(parted)                                                                  
+(parted) mkpart primary fat16 2048s 256M
+(parted)                                                                  
+(parted) mkpart primary ext4 256M 10G                                     
+(parted)                                                                  
+(parted) mkpart primary ext4 10G 12G                                      
+(parted)                                                                  
+(parted) set 1 boot on                                                    
+(parted)                                                                  
+(parted) q                                                                
+Information: You may need to update /etc/fstab.
+
+$
+$ sudo blkid <device_usbstick>*
+<device_usbstick>: PTUUID="c822a5a3" PTTYPE="dos"
+<device_usbstick>1: LABEL="multiboot" UUID="8CBE-FDF9" TYPE="vfat" PARTUUID="c822a5a3-01"
+<device_usbstick>2: PARTUUID="c822a5a3-02"
+<device_usbstick>3: PARTUUID="c822a5a3-03"
+
+$
+$ sudo parted <device_usbstick> print
+Model: Corsair UFD (scsi)
+Disk <device_usbstick>: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags: 
+
+Number  Start   End     Size    Type     File system  Flags
+ 1      1049kB  256MB   255MB   primary  fat32        boot, lba
+ 2      256MB   10,0GB  9744MB  primary
+ 3      10,0GB  12,0GB  2000MB  primary
+
+$
+------------------------------------------
++
+** **XOR** __GPT__ one
++
+.parted – Partition table and partitions creation – __gpt__
+------------------------------------------
+$ sudo parted --align minimal <device_usbstick>
+GNU Parted 3.2
+Using <device_usbstick>
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mktable gpt
+Warning: The existing disk label on <device_usbstick> will be destroyed and all data on
+this disk will be lost. Do you want to continue?
+Yes/No? y
+(parted)
+(parted) mkpart primary fat16 0 100MB                                     
+(parted)                                                                  
+(parted) mkpart primary fat16 100MB 356MB
+(parted)                                                                  
+(parted) mkpart primary ext4 356MB 10GB                                   
+(parted)                                                                  
+(parted) mkpart primary ext4 10GB 12GB
+(parted)                                                                  
+(parted) set 1 esp on                                                     
+(parted)                                                                  
+(parted) set 2 boot on                                                    
+(parted)
+(parted) q
+Information: You may need to update /etc/fstab.
+$
+$ sudo blkid <device_usbstick>*
+<device_usbstick>: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
+<device_usbstick>1: PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
+<device_usbstick>2: PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
+<device_usbstick>3: PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
+<device_usbstick>4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+$
+$ sudo parted <device_usbstick> print
+Model: Corsair UFD (scsi)
+Disk <device_usbstick>: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name     Flags
+ 1      17,4kB  100MB   100MB                primary  boot, esp
+ 2      100MB   356MB   256MB                primary  boot, esp
+ 3      356MB   10,0GB  9644MB               primary
+ 4      10,0GB  12,0GB  2000MB  ext4         primary
+
+$
+------------------------------------------
+
+
+//mklabel msdos
+//mkpart primary fat32 0 100%
+//set 1 boot on
+//
+//parted /dev/sdb print
+//
+//sudo blkid /dev/sdb*
+
+//[TIP]
+//.--align minimal
+//==========================================
+//Cannot say better than in the man page:
+//
+//[quote,man parted,2015-06-18]
+//__________________________________________
+//Set alignment  for  newly  created  partitions, valid alignment types are:
+//
+//   none   Use the minimum alignment allowed by the disk type.
+//
+//   cylinder
+//          Align partitions to cylinders.
+//
+//   minimal
+//          Use minimum alignment  as  given  by  the  disk  topology
+//          information.  This  and  the  opt  value  will use layout
+//          information provided by the disk  to  align  the  logical
+//          partition  table  addresses  to actual physical blocks on
+//          the disks.  The min value is the minimum alignment needed
+//          to align the partition properly to physical blocks, which
+//          avoids performance degradation.
+//
+//   optimal
+//          Use optimum alignment  as  given  by  the  disk  topology
+//          information.  This  aligns  to a multiple of the physical
+//          block size in a way that guarantees optimal performance.
+//_______________________________
+//
+//With
+//
+//* __--align optimal__, I still had the warning message “Warning: The resulting partition is not properly aligned for best performance.”
+//* __--align minimal__, I did not get the error message. But alignment is **exactly** (as reported by __print__ command) the same as for __--align optimal__.
+//==========================================
+//+
+
+
+
+
+[[id_usbstick_preparation_procedure_filesystem_creation]]
+=== Procedure – Filesystem creation
+
+
+__Fat16__ is the recommended choice for __FreeDOS__, __Fat32__ being hard to boot from)footnote:[http://www.freedos.org/wiki/index.php/Install#Installing_on_a_physical_PC].
+
+[TIP]
+.Filesystem check
+==========================================
+Add the option __-cc__ to have the filesystem thoroughly checked.
+
+Not done in the documentation as it takes too much time and commands must be copied/pasted to be tested.
+==========================================
+
+. Create filesystems on existing partitions
+ ** on __msdos__ partition table
++
+.mkfs – Filesystem creation – __msdos__
+------------------------------------------
+$ sudo mkfs.fat -v -n multib_free <device_usbstick>1
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+<device_usbstick>1 has 64 heads and 32 sectors per track,
+hidden sectors 0x0800;
+logical sector size is 512,
+using 0xf8 media descriptor, with 497664 sectors;
+drive number 0x80;
+filesystem has 2 16-bit FATs and 8 sectors per cluster.
+FAT size is 248 sectors, and provides 62141 clusters.
+There is 1 reserved sector.
+Root directory contains 512 slots and uses 32 sectors.
+Volume ID is bdc3a6ca, volume label multib_free.
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_main <device_usbstick>2
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_main
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+595680 inodes, 2379008 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2436890624
+73 block groups
+32768 blocks per group, 32768 fragments per group
+8160 inodes per group
+Filesystem UUID: e5b1bee9-96e2-4e82-aae1-339cbbd6050c
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done 
+
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_data <device_usbstick>3
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_data
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+122160 inodes, 488192 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=503316480
+15 block groups
+32768 blocks per group, 32768 fragments per group
+8144 inodes per group
+Filesystem UUID: a3d0006b-088e-4015-9773-9f0db2d51658
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done 
+
+$
+$
+$ sudo blkid <device_usbstick>*
+<device_usbstick>: PTUUID="c822a5a3" PTTYPE="dos"
+<device_usbstick>1: SEC_TYPE="msdos" LABEL="multib_free" UUID="BDC3-A6CA" TYPE="vfat" PARTUUID="c822a5a3-01"
+<device_usbstick>2: LABEL="multib_main" UUID="e5b1bee9-96e2-4e82-aae1-339cbbd6050c" TYPE="ext4" PARTUUID="c822a5a3-02"
+<device_usbstick>3: LABEL="multib_data" UUID="a3d0006b-088e-4015-9773-9f0db2d51658" TYPE="ext4" PARTUUID="c822a5a3-03"
+$
+------------------------------------------
++
+** **XOR** on __GPT__ partition table
++
+.mkfs – Filesystem creation – __gpt__
+------------------------------------------
+$ sudo mkfs.fat -v -n multib_esp <device_usbstick>1
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+<device_usbstick>1 has 64 heads and 32 sectors per track,
+hidden sectors 0x0022;
+logical sector size is 512,
+using 0xf8 media descriptor, with 195279 sectors;
+drive number 0x80;
+filesystem has 2 16-bit FATs and 4 sectors per cluster.
+FAT size is 192 sectors, and provides 48715 clusters.
+There is 1 reserved sector.
+Root directory contains 512 slots and uses 32 sectors.
+Volume ID is dcbebb01, volume label multib_esp .
+$
+$ sudo mkfs.fat -v -F 32 -n multib_free <device_usbstick>2
+mkfs.fat 3.0.28 (2015-05-16)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+<device_usbstick>2 has 64 heads and 32 sectors per track,
+hidden sectors 0x2faf1;
+logical sector size is 512,
+using 0xf8 media descriptor, with 500000 sectors;
+drive number 0x80;
+filesystem has 2 32-bit FATs and 1 sector per cluster.
+FAT size is 3846 sectors, and provides 492276 clusters.
+There are 32 reserved sectors.
+Volume ID is def41e1d, volume label multib_free.
+$
+$ sudo mkfs.ext4 -v -m 0 -L multib_main <device_usbstick>3
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_main
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+588672 inodes, 2354492 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=2411724800
+72 block groups
+32768 blocks per group, 32768 fragments per group
+8176 inodes per group
+Filesystem UUID: 28345150-0177-4076-89a5-38b7fdff26c4
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done 
+
+$
+$ sudo parted <device_usbstick> print
+Model: Corsair UFD (scsi)
+Disk <device_usbstick>: 32,1GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name     Flags
+ 1      17,4kB  100MB   100MB   fat16        primary  boot, esp
+ 2      100MB   356MB   256MB   fat32        primary  boot, esp
+ 3      356MB   10,0GB  9644MB  ext4         primary
+ 4      10,0GB  12,0GB  2000MB  ext4         primary
+
+$
+$ sudo blkid <device_usbstick>*
+<device_usbstick>: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
+<device_usbstick>1: SEC_TYPE="msdos" LABEL="multib_esp" UUID="DCBE-BB01" TYPE="vfat" PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
+<device_usbstick>2: LABEL="multib_free" UUID="DEF4-1E1D" TYPE="vfat" PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
+<device_usbstick>3: LABEL="multib_main" UUID="28345150-0177-4076-89a5-38b7fdff26c4" TYPE="ext4" PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
+<device_usbstick>4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+$
+------------------------------------------
+
+
+
+[[id_usbstick_preparation_procedure_grub_installation]]
+=== Procedure – __Grub__ installation
+
+
+. Install __Grub2__ on the USB stick
+** for __BIOS__ version
++
+.grub – __Grub2__ installation – __i386-pc__ (on __msdos__ partition table)
+------------------------------------------
+$ sudo mount <device_usbstick>2 <dir_mount_usbstick_main>
+$
+$ mount | grep <device_usbstick>
+<device_usbstick>2 on <dir_mount_usbstick_main> type ext4 (rw,relatime,data=ordered)
+$ 
+$ sudo grub-install --verbose --target=i386-pc --recheck --boot-directory=<dir_mount_usbstick_main>/boot <device_usbstick>
+Installing for i386-pc platform.
+[…]
+grub-install: info: copying `/usr/lib/grub/i386-pc/loopback.mod' -> `<dir_mount_usbstick_main>/grub/i386-pc/loopback.mod'.
+[…]
+grub-install: info: <device_usbstick>2 is not present.
+grub-install: info: Looking for <device_usbstick>2.
+grub-install: info: <device_usbstick> is a parent of <device_usbstick>2.
+grub-install: info: <device_usbstick>2 starts from 499712.
+grub-install: info: opening the device hostdisk/<device_usbstick>.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/<device_usbstick> is 62652416.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/<device_usbstick> is 62652416.
+grub-install: info: Scanning for DISKFILTER devices on disk hostdisk/<device_usbstick>.
+grub-install: info: Scanning for mdraid1x devices on disk hostdisk/<device_usbstick>.
+grub-install: info: Scanning for mdraid09_be devices on disk hostdisk/<device_usbstick>.
+grub-install: info: Scanning for mdraid09 devices on disk hostdisk/<device_usbstick>.
+grub-install: info: Scanning for dmraid_nv devices on disk hostdisk/<device_usbstick>.
+grub-install: info: Scanning for ldm devices on disk hostdisk/<device_usbstick>.
+grub-install: info: scanning hostdisk/<device_usbstick> for LDM.
+grub-install: info: no LDM signature found.
+grub-install: info: Scanning for lvm devices on disk hostdisk/<device_usbstick>.
+grub-install: info: no LVM signature found.
+[…]
+grub-install: info: grub-mkimage --directory '/usr/lib/grub/i386-pc' --prefix '(,msdos2)/boot/grub' --output '<dir_mount_usbstick_main>/boot/grub/i386-pc/core.img' --format 'i386-pc' --compression 'auto'  'ext2' 'part_msdos' 'biosdisk' 
+.
+grub-install: info: the total module size is 0x3bfc.
+grub-install: info: reading /usr/lib/grub/i386-pc/kernel.img.
+grub-install: info: locating the section .text at 0x0.
+grub-install: info: locating the section .rodata at 0x54d4.
+grub-install: info: locating the section .data at 0x6480.
+grub-install: info: locating the section .bss at 0x6c08.
+grub-install: info: reading /usr/lib/grub/i386-pc/fshelp.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/ext2.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/part_msdos.mod.
+grub-install: info: reading /usr/lib/grub/i386-pc/biosdisk.mod.
+grub-install: info: kernel_img=0x24ddab0, kernel_size=0x6c08.
+grub-install: info: the core size is 0x5527.
+grub-install: info: reading /usr/lib/grub/i386-pc/lzma_decompress.img.
+grub-install: info: reading /usr/lib/grub/i386-pc/diskboot.img.
+grub-install: info: writing 0x200 bytes.
+grub-install: info: writing 0x6067 bytes.
+grub-install: info: copying `/usr/lib/grub/i386-pc/boot.img' -> `<dir_mount_usbstick_main>/boot/grub/i386-pc/boot.img'.
+grub-install: info: grub-bios-setup  --verbose     --directory='<dir_mount_usbstick_main>/boot/grub/i386-pc' --device-map='<dir_mount_usbstick_main>/boot/grub/device.map' '<device_usbstick>'.
+grub-install: info: reading <dir_mount_usbstick_main>/boot/grub/i386-pc/boot.img.
+grub-install: info: reading <dir_mount_usbstick_main>/boot/grub/i386-pc/core.img.
+grub-install: info: root is `(null)', dest is `hostdisk/<device_usbstick>'.
+grub-install: info: Opening dest.
+grub-install: info: drive = 0.
+grub-install: info: the size of hostdisk/<device_usbstick> is 62652416.
+grub-install: info: <device_usbstick>2 is present.
+[…]
+grub-install: info: saving <98,0,512>.
+grub-install: info: saving <99,0,512>.
+grub-install: info: saving <100,0,512>.
+Installation finished. No error reported.
+$
+------------------------------------------
++
+** **XOR** for __UEFI__
++
+.grub – __Grub2__installation –  __x86_64-efi__ (on __GPT__ partition table)
+------------------------------------------
+$ sudo mount <device_usbstick>3 <dir_mount_usbstick_main>
+$
+$ sudo mkdir -v -p <dir_mount_usbstick_main>/boot/efi
+mkdir: created directory '<dir_mount_usbstick_main>/boot'
+mkdir: created directory '<dir_mount_usbstick_main>/boot/efi'
+$
+$ sudo mount <device_usbstick>1 <dir_mount_usbstick_main>/boot/efi
+$
+$ mount | grep <device_usbstick>
+<dir_usbstick_partition_main> on <dir_mount_usbstick_main> type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+<dir_usbstick_partition_esp> on <dir_mount_usbstick_main>/boot/efi type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$
+$ sudo grub-install --verbose --target=x86_64-efi --no-floppy --removable --recheck --boot-directory=<dir_mount_usbstick_main>/boot --efi-directory=<dir_mount_usbstick_main>/boot/efi <device_usbstick>
+[…]
+Installation finished. No error reported.
+$
+------------------------------------------
+
+
+//////////////////////////////////////////
+--efi-directory=DIR -- use DIR as the EFI System Partition root.
+
+.Shell – __Grub__ __i386__ installation – __gpt__
+------------------------------------------
+$ sudo mount <device_usbstick>1 /media/tmp
+$
+$ mount | grep <device_usbstick>
+/dev/sdb1 on /media/tmp type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$
+$ sudo grub-install --verbose --target=i386-pc --recheck --boot-directory=/media/tmp/boot /dev/sdb
+Installing for i386-pc platform.
+Installation finished. No error reported.
+$
+------------------------------------------
+//////////////////////////////////////////
+
+
+[NOTE]
+.__--removable__ option
+==========================================
+The __Grub2__ man page regarding the option __--removable__ is stating “the installation device is removable. This option is only available on EFI.".
+
+Nevertheless, using it with __--target=i386-pc__ does not (as far as I can say) trigger any warning or error message.
+==========================================
+
+
+[TIP]
+.__Grub2__ and post-MBR / pre-partition space
+==========================================
+__Grub2__ needs some space to store its files. On __msdos__ partition table with a __master boot record__ (__MBR__) there are two possibilitiesfootnote:['https://www.gnu.org/software/grub/manual/html_node/BIOS-installation.html#BIOS-installation[]']. As we want to install it before the first partition, one need a bit (at least 31 kB) of space before this first partition.
+
+Therefore, if one does not push back the begining of the first partition (that might be done “automagically” by some partitioning tools to align things properly), __Grub__ will not install and report the following error
+
+[quote,Grub2, error message “no post-MBR gap”]
+__________________________________________
+grub-install: warning: this msdos-style partition label has no post-MBR gap; embedding won't be possible.
+grub-install: warning: Embedding is not possible.  GRUB can only be installed in this setup by using blocklists.  However, blocklists are UNRELIABLE and their use is discouraged..
+grub-install: error: will not proceed with blocklists.
+__________________________________________
+
+This is when having the following partition alignment:
+
+------------------------------------------
+Sector size (logical/physical): 512B/512B$
+Partition Table: msdos$
+Disk Flags:⋅$
+$
+Number  Start  End     Size    Type     File system  Flags$
+ 1      512B   32,1GB  32,1GB  primary               boot, lba
+------------------------------------------
+
+Whereas with a __start__ at __1049kB__ (or 2048 sectors), __Grub__ is not complaining anymore.
+
+==========================================
+
+[CAUTION]
+.__Grub2__ __--boot-directory__ or __--root-directory__
+==========================================
+In the man page of __Grub2__, only __--boot-directory__ is listed.
+
+In the man page of __Grub-legacy__ (v.0.97)footnote:['https://www.gnu.org/software/grub/manual/legacy/grub.html#Invoking-grub_002dinstall[]'], __--boot-directory__ does not exist but there is a __--root-directory__ option.
+
+Man pages are saying:
+
+* __0.97__: 
++
+------------------------------------------
+--root-directory=dir
+    Install GRUB images under the directory dir instead of the root directory. This option is useful when you want to install GRUB into a separate partition or a removable disk. Here is an example in which you have a separate boot partition which is mounted on /boot: grub-install --root-directory=/boot hd0
+------------------------------------------
++
+* deb:__2.02~beta2-26__:
++
+------------------------------------------
+--boot-directory=DIR 
+    install GRUB images under the directory DIR/grub instead of the boot/grub directory.
+------------------------------------------
+
+
+The main difference between __--boot-directory__ and __--root-directory__ is that (as explained by the man page):
+
+* __--root-directory__ is creating the __/boot__ directory on ++<device_usbstick>++ so we have __/boot/grub__ on ++<device_usbstick>++
+* whereas __--boot-directory__ does **not** create the __/boot__  directory – unless one specifies it, of course – so we have __/grub__ on ++<device_usbstick>++.
+
+So why has __--root-directory__ disapeared from __Grub2__ man page but can still be used?
+
+==========================================
+
+
+
+
+
+
+[[id_usbstick_preparation_procedure_directory_structure_creation]]
+=== Procedure – Directory structure creation
+
+
+. Create directories required by following step <<id_installation_livesystem>>
++
+.shell – Create required directories
+------------------------------------------
+$ mount | grep <device_usbstick>
+<dir_usbstick_partition_main> on <dir_mount_usbstick_main> type ext4 (rw,relatime,data=ordered)
+$
+$ sudo mkdir -v -p <dir_mount_usbstick_main>/boot/iso
+mkdir: created directory ‘<dir_mount_usbstick_main>/boot/iso’
+$
+------------------------------------------
++
+. Check the directory structure
+ ** for the __BIOS__ version
++
+.tree – check directory structure – bios
+------------------------------------------
+$ sudo tree <dir_mount_usbstick_main>/
+<dir_mount_usbstick_main>
+├── boot
+│   ├── grub
+│   │   ├── fonts
+│   │   │   └── unicode.pf2
+│   │   ├── grubenv
+│   │   ├── i386-pc
+│   │   │   ├── 915resolution.mod
+[…]
+│   │   │   └── zfs.mod
+│   │   └── locale
+│   │       └── fr.mo
+│   └── iso
+└── lost+found
+
+7 directories, 274 files
+$
+------------------------------------------
++
+ ** **XOR** for the __UEFI__ version
++
+.tree – check directory structure – uefi
+------------------------------------------
+$ sudo tree <dir_mount_usbstick_main>/
+<dir_mount_usbstick_main>
+├── boot
+│   ├── efi
+│   ├── grub
+│   │   ├── fonts
+│   │   │   └── unicode.pf2
+│   │   ├── grubenv
+│   │   ├── locale
+│   │   │   ├── ast.mo
+[…]
+│   │   │   └── zh_TW.mo
+│   │   └── x86_64-efi
+│   │       ├── acpi.mod
+[…]
+│   │       └── zfs.mod
+│   └── iso
+└── lost+found
+
+8 directories, 296 files
+$
+------------------------------------------
+
+
+
+
+
+=== Clean
+
+n/a
+
+
+
+
+=== Q&A
+
+
+
+//////////////////////////////////////////
+FIXME- boot -FIXME
+
+msdos / vfat 2048s 100% / grub-pc -> OK (e900 boots Grub menu)
+gpt / vfat 2048s 42M - bios_grub & vfat 42M 100% / grub-pc -> NOK (e900 displays __ç\x01footnote:[This is the “SOH” or “white face” character in ASCII]__)
+gpt / vfat 2048s 42M - bios_grub & vfat 42M 100% / grub-pc -> NOK (lilith displays __ç\x01__)
+
+gpt / vfat 2048s 142M - bios_grub & vfat 142M 100% / grub-pc -> NOK (e900 displays __ç\x01footnote:[This is the “SOH” or “white face” character in ASCII]__)
+gpt / vfat 2048s 142M - bios_grub & vfat 142M 100% / grub-pc -> NOK (lilith displays __ç\x01__)
+
+gpt / vfat 2048s 42M - bios_grub & vfat32 142M 100% / grub-pc -> NOK (e900 displays a blinking prompt at the top left of the screen)
+gpt / vfat 2048s 42M - bios_grub & vfat32 142M 100% / grub-pc -> NOK (lilith displays a blinking prompt at the top left of the screen)
+NOTE: having <device_usbstick>1 forced into fat32 (and not fat16 as done implicitly) render the device unmountable (__mount: /dev/sdb1: can't read superblock__) after being written by __Grub__ **and** unmounted.
+//////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_installation_livesystem]]
+== Installation of live systems
+
+
+
+
+NOTE: This part is independent of the __BIOS__ / __UEFI__ choice.
+
+
+
+
+=== Goal
+
+
+This part presents how to install live systems one wants to boot from the USB stick (as defined in <<id_preamble_goal>>).
+
+So there is a procedure for each system:
+
+* <<id_installation_procedure_systemrescuecd>>,
+
+
+
+=== Pre-requisites
+
+
+. the USB stick ready (see <<id_usbstick_preparation>>),
+. the required system (ISO) images with their hash or signature checked and validated.
++
+[NOTE]
+.Hash and signature validation
+==========================================
+This documentation will not explain how to check and validate hashes or signatures as this information is provided in a format varying from one source to another.
+==========================================
+
+
+
+
+=== Output
+
+
+* The USB stick with 
+ ** required live systems (including __FreeDOS__)
+   *** all images are in the directory __/boot/iso/__,
+ ** __memdisk__ in the directory __/boot/__.
+
+
+
+
+[[id_installation_procedure_systemrescuecd]]
+=== Procedure – __SystemRescueCD__ installation
+
+
+//////////////////////////////////////////
+. Mount the __SystemRescueCD__ image
++
+.Shell – __SystemRescueCD__ image mounting
+------------------------------------------
+$
+$ sudo mount <dir_download>/iso/systemrescuecd-x86-4.5.3.iso /mnt/tmp
+mount: /dev/loop1 is write-protected, mounting read-only
+$
+$ ls -al /mnt/tmp
+total 318M
+drwxr-xr-x 1 root root 2,0K mai   24 08:06 ./
+drwxr-xr-x 7 root root 4,0K févr.  4 12:58 ../
+drwxr-xr-x 1 root root 2,0K juil. 17  2014 boot/
+drwxr-xr-x 1 root root 2,0K oct.  20  2013 bootdisk/
+drwxr-xr-x 1 root root 2,0K déc.  31  2012 bootprog/
+drwxr-xr-x 1 root root 2,0K mai   24 08:06 efi/
+drwxr-xr-x 1 root root 4,0K mai   24 08:05 isolinux/
+drwxr-xr-x 1 root root 2,0K févr. 14  2014 ntpasswd/
+drwxr-xr-x 1 root root 2,0K déc.  31  2012 usb_inst/
+-rw-r--r-- 1 root root 2,3K juil. 17  2014 readme.txt
+-rw-r--r-- 1 root root 318M mai   24 08:05 sysrcd.dat
+-rw-r--r-- 1 root root   45 mai   24 08:05 sysrcd.md5
+-rwxr-xr-x 1 root root  16K févr.  2 05:11 usb_inst.sh*
+-rw-r--r-- 1 root root  877 juil. 17  2014 usbstick.htm
+-rw-r--r-- 1 root root    6 mai   24 08:05 version
+$
+------------------------------------------
++
+. Create the directory for __SystemRescueCD__  content onto our USB stick
++
+.Shell – __SystemRescueCD__ directory creation
+------------------------------------------
+$ sudo mkdir /media/tmp/sysrcd
+$
+$ sudo ls -al /media/tmp/sysrcd
+total 52
+drwxr-x--x  4 root root 16384 juil. 13 14:25 .
+drwsrwsrwt 23 root root  4096 févr.  5 14:11 ..
+drwxr-x--x  5 root root 16384 juil. 13 13:46 grub
+drwxr-x--x  2 root root 16384 juil. 13 14:25 sysrcd
+$
+------------------------------------------
++
+. Copy the (required) content from the (mounted) __SystemRescueCD__ image onto our USB stick
++
+.Shell – Copying the (required) files from the (mounted) __SystemRescueCD__ image onto our USB stick
+------------------------------------------
+$ sudo cp /mnt/tmp/sysrcd.dat /media/tmp/
+$ sudo cp /mnt/tmp/sysrcd.md5 /media/tmp/
+$ sudo cp /mnt/tmp/version /media/tmp/
+$ sudo cp -r /mnt/tmp/ntpasswd /media/tmp/
+$ sudo cp /mnt/tmp/isolinux/rescue32 /media/tmp/sysrcd/
+$ sudo cp /mnt/tmp/isolinux/rescue64 /media/tmp/sysrcd/
+$ sudo cp /mnt/tmp/isolinux/altker32 /media/tmp/sysrcd/
+$ sudo cp /mnt/tmp/isolinux/altker64 /media/tmp/sysrcd/
+$ sudo cp /mnt/tmp/isolinux/initram.igz /media/tmp/sysrcd/
+$ sudo cp /mnt/tmp/boot/grub/font.pf2 /media/tmp/grub/
+$
+$ sudo ls -al /media/tmp/sysrcd
+total 324788
+drwxr-x--x  5 root root     16384 juil. 13 14:36 .
+drwsrwsrwt 23 root root      4096 févr.  5 14:11 ..
+drwxr-x--x  5 root root     16384 juil. 13 14:34 grub
+drwxr-x--x  2 root root     16384 juil. 13 14:36 ntpasswd
+drwxr-x--x  2 root root     16384 juil. 13 14:29 sysrcd
+-rwxr-x--x  1 root root 332468224 juil. 13 14:28 sysrcd.dat
+-rwxr-x--x  1 root root        45 juil. 13 14:28 sysrcd.md5
+-rwxr-x--x  1 root root         6 juil. 13 14:28 version
+$ 
+------------------------------------------
+//////////////////////////////////////////
+
+. Mount the USB stick __main__ partition
++
+.mount – mount __main__ partition
+------------------------------------------
+$ sudo mount /dev/sdb2 <dir_mount_usbstick_main>
+$
+$ mount | grep sdb2
+/dev/sdb2 on <dir_mount_usbstick_main> type ext4 (rw,relatime,data=ordered)
+$
+------------------------------------------
++
+. Copy the __SystemRescueCD__ ISO image onto the USB stick
++
+.rsync – __SystemRescueCD__ copy to ++<device_usbstick>++
+------------------------------------------
+$ rsync -vrihl <dir_download>/iso/systemrescuecd* <dir_mount_usbstick_main>/boot/iso
+FIXME
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/iso | grep systemres
+FIXME
+$
+------------------------------------------
++
+. Validate the checksums
++
+.sha256 – Validate hashes
+------------------------------------------
+$ sudo sha256sum <dir_mount_usbstick_main>/boot/iso/systemrescuecd-x86-4.5.3.iso
+16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3  <dir_mount_usbstick_main>/iso/systemrescuecd-x86-4.5.3.iso
+$
+------------------------------------------
+
+
+
+
+[[id_installation_procedure_tails]]
+=== Procedure – __Tails__ installation
+
+
+//////////////////////////////////////////
+. Mount the __Tails__ image
++
+.Shell – __Tails__ image mounting
+------------------------------------------
+$
+$ sudo mount <dir_download>/iso/tail /mnt/tmp
+mount: /dev/loop1 is write-protected, mounting read-only
+$
+$ ls -al /mnt/tmp
+total 18K
+dr-xr-xr-x 7 root root 2,0K mai   11 13:52 ./
+drwxr-xr-x 7 root root 4,0K févr.  4 12:58 ../
+dr-xr-xr-x 2 root root 2,0K mai   11 13:51 .disk/
+dr-xr-xr-x 3 root root 2,0K mai   11 13:52 EFI/
+dr-xr-xr-x 2 root root 4,0K mai   11 13:51 isolinux/
+dr-xr-xr-x 2 root root 2,0K mai   11 13:51 live/
+dr-xr-xr-x 5 root root 2,0K mai   11 13:51 utils/
+$
+------------------------------------------
++
+. Copy the (required) content from the (mounted) __Tails__ image onto our USB stick
++
+.Shell – Copying the (required) files from the (mounted) __Tails__ image onto our USB stick
+------------------------------------------
+$ sudo mkdir /media/tmp/boot/tails
+$
+$ sudo cp -a /mnt/tmp/live/* /media/tmp/boot/tails/
+$
+$ sudo ls -al /media/tmp/tails
+total 324804
+drwxr-x--x  6 root root     16384 juil. 13 14:48 .
+drwsrwsrwt 23 root root      4096 févr.  5 14:11 ..
+drwxr-x--x  5 root root     16384 juil. 13 14:34 grub
+drwxr-x--x  2 root root     16384 mai   11 13:51 live
+drwxr-x--x  2 root root     16384 juil. 13 14:36 ntpasswd
+drwxr-x--x  2 root root     16384 juil. 13 14:29 sysrcd
+-rwxr-x--x  1 root root 332468224 juil. 13 14:28 sysrcd.dat
+-rwxr-x--x  1 root root        45 juil. 13 14:28 sysrcd.md5
+-rwxr-x--x  1 root root         6 juil. 13 14:28 version
+$ 
+------------------------------------------
+//////////////////////////////////////////
+
+. Copy the __Tails__ ISO image onto the USB stick
++
+.rsync – Copy __Tails__  image onto ++<device_usbstick>++
+------------------------------------------
+$ rsync -vrihl <dir_download>/iso/tails-i386-1.4.iso* <dir_mount_usbstick_main>/boot/iso/
+sending incremental file list
+>f+++++++++ tails-i386-1.4.iso
+>f+++++++++ tails-i386-1.4.iso.sig
+
+sent 970.82M bytes  received 54 bytes  29.87M bytes/sec
+total size is 970.58M  speedup is 1.00
+$
+$ ls -al <dir_mount_usbstick_main>/boot/iso | grep tail
+total 2,1G
+-rwxr-x--x 1 lerouge lerouge 926M juil. 13 17:45 tails-i386-1.4.iso*
+-rwxr-x--x 1 lerouge lerouge  801 juil. 13 17:45 tails-i386-1.4.iso.sig
+$ 
+------------------------------------------
+
+
+
+
+[[id_installation_procedure_gparted]]
+=== Procedure – __GParted__ installation
+
+
+
+. Copy the __GParted__ ISO image onto the USB stick
++
+.rsync – __GParted__ copy to ++<device_usbstick>++
+------------------------------------------
+$ sudo rsync -vrihl <dir_download>/iso/gparted-live* <dir_mount_usbstick_main>/boot/iso
+FIXME
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/iso | grep gparted
+FIXME
+$
+
+------------------------------------------
++
+. Validate checksums
++
+.sha256 – Validate hashes
+------------------------------------------
+$ cd <dir_mount_usbstick_main>/boot/iso
+$
+$ sudo sha256sum -c gparted-live.checksum
+sha256sum: gparted-live-0.22.0-2-amd64.iso: No such file or directory
+gparted-live-0.22.0-2-amd64.iso: FAILED open or read
+gparted-live-0.22.0-2-i586.iso: OK
+sha256sum: gparted-live-0.22.0-2-i686-pae.iso: No such file or directory
+gparted-live-0.22.0-2-i686-pae.iso: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-amd64.zip: No such file or directory
+gparted-live-0.22.0-2-amd64.zip: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-i586.zip: No such file or directory
+gparted-live-0.22.0-2-i586.zip: FAILED open or read
+sha256sum: gparted-live-0.22.0-2-i686-pae.zip: No such file or directory
+gparted-live-0.22.0-2-i686-pae.zip: FAILED open or read
+sha256sum: WARNING: 14 lines are improperly formatted
+sha256sum: WARNING: 5 listed files could not be read
+$
+------------------------------------------
+
+
+
+
+[[id_installation_procedure_freedos]]
+=== Procedure – __FreeDOS__ installation
+
+.Roadmap
+. generate a __FreeDOS__ image,
+. copy this __FreeDOS__ image onto the USB stick,
+. copy __memdisk__ onto the USB stick.
+
+//
+
+.Detail
+. Generate a __FreeDOS__image
+ ** follow __Timetombs – Tip – Unix – System administration – USB key boot for bios upgrade (with __FreeDOS__)__ documentation
+ ** have its output ready: __freetown-boot-freedos-iris.img__,
+
+. Copy the generated __FreeDOS__ image onto the USB stick
++
+.rsync – Copy the __FreeDOS__ image onto ++<device_usbstick>++
+------------------------------------------
+$ sudo rsync -vrihl <dir_download>/iso/tails-i386-1.4.iso* <dir_mount_usbstick_main>/boot/iso/
+sending incremental file list
+FIXME
+$
+------------------------------------------
++
+. Copy __memdisk__ onto the USB stick
++
+.Shell – Copy __memdisk__ onto ++<device_usbstick>++
+------------------------------------------
+$ sudo cp /usr/lib/syslinux/memdisk <dir_mount_usbstick_main>/boot
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot
+total 44
+drwxr-x--x 4 root root  4096 juil. 14 21:09 .
+drwxr-xr-x 4 root root  4096 juil. 14 20:51 ..
+drwxr-x--x 5 root root  4096 juil. 14 20:51 grub
+drwxr-x--x 2 root root  4096 juil. 14 21:08 iso
+-rw-r----- 1 root root 25372 juil. 14 21:09 memdisk
+$
+------------------------------------------
+
+
+FIXME- not totally sure one needs the deb:__syslinux-common__  as there is a Grub2 module __memdisk__ -FIXME
+
+
+
+
+[[id_installation_procedure_debian]]
+==== Procedure – __Debian__ installation
+
+NOTE: __Debian__ means here the __Debian installer__.
+
+. Copy the __Debian__ __NetInstaller__ ISO image onto the USB stick
++
+.rsync – copy __debian installer__ image to ++<device_usbstick>++
+------------------------------------------
+$ sudo rsync -vrihl <dir_download>/iso/debian-8.1.0-amd64-i386-netinst.iso* <dir_mount_usbstick_main>/boot/iso
+sending incremental file list
+>f+++++++++ debian-8.1.0-amd64-i386-netinst.iso
+
+sent 582.10M bytes  received 35 bytes  68.48M bytes/sec
+total size is 581.96M  speedup is 1.00
+$
+$ sudo rsync -vrihl <dir_download>/iso/debian/SHA* <dir_mount_usbstick_main>/boot/iso
+sending incremental file list
+>f+++++++++ SHA1SUMS
+>f+++++++++ SHA1SUMS.sign
+>f+++++++++ SHA256SUMS
+>f+++++++++ SHA256SUMS.sign
+>f+++++++++ SHA512SUMS
+>f+++++++++ SHA512SUMS.sign
+
+sent 3.21K bytes  received 130 bytes  6.69K bytes/sec
+total size is 2.80K  speedup is 0.84
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/iso | grep debian
+FIXME
+$
+
+------------------------------------------
++
+. Validate checksums
++
+.sha256 – Validate hashes
+------------------------------------------
+$ cd <dir_mount_usbstick_main>/boot/iso
+$
+$ sudo sha256sum -c gparted-live.checksum
+FIXME
+$
+------------------------------------------
++
+. Get the __initrd__ from __hd-media__ type installer
++
+------------------------------------------
+FIXME
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-i386/current/images/hd-media/initrd.gz install.386
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-i386/current/images/hd-media/gtk/initrd.gz install.386/gtk
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-amd64/current/images/hd-media/initrd.gz install.amd
+wget http://ftp.debian.org/debian/dists/jessie/main/installer-amd64/current/images/hd-media/gtk/initrd.gz install.amd/gtk
+------------------------------------------
++
+. Copy __initrd__ from __hd-media__ type installer onto the USB stick
++
+.rsync – copy __initrd.gz__s to ++<device_usbstick>++__/boot/debian__
+------------------------------------------
+$ sudo mkdir <dir_mount_usbstick_main>/boot/debian
+$
+$ sudo rsync -vrihl <dir_download>/iso/debian/install.* <dir_mount_usbstick_main>/boot/debian
+sending incremental file list
+cd+++++++++ install.386/
+>f+++++++++ install.386/initrd.gz
+cd+++++++++ install.386/gtk/
+>f+++++++++ install.386/gtk/initrd.gz
+cd+++++++++ install.amd/
+>f+++++++++ install.amd/initrd.gz
+cd+++++++++ install.amd/gtk/
+>f+++++++++ install.amd/gtk/initrd.gz
+
+sent 72.52M bytes  received 120 bytes  48.34M bytes/sec
+total size is 72.50M  speedup is 1.00
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/debian
+------------------------------------------
+
+
+
+
+[[id_installation_porocedure_kali]]
+==== Procedure – __Kali__ installation
+
+
+
+FIXME
+
+. Un-mount the USB stick __main__ partition
++
+.mount – umount __main__ partition
+------------------------------------------
+$ sudo umount <dir_mount_usbstick_main>
+$
+$ mount | grep <device_usbstick>
+$
+------------------------------------------
+
+
+
+
+=== Clean
+
+
+n/a
+//////////////////////////////////////////
+.Un-mount __SystemRescueCD__ image
+------------------------------------------
+$ sudo umount /mnt/tmp
+$
+$ mount | grep /mnt/tmp
+$
+------------------------------------------
+//////////////////////////////////////////
+
+
+
+
+=== Q&A
+
+
+n/a
+//////////////////////////////////////////
+------------------------------------------
+$
+$ mount | grep /mnt/tmp
+/home/lerouge/!down/iso/systemrescuecd-x86-4.5.3.iso on /mnt/tmp type iso9660 (ro,relatime)
+$
+------------------------------------------
+//////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_freedos]]
+== __FreeDOS__ installation
+
+
+
+
+
+//losetup -o 16384 /dev/loop0 FreeDOS-1.1-USB-Boot.img
+// essayer avec 63456 -> NOK (mount error: wrong fs type, bad option, bad superblock on /dev/loop1)
+// que 31 Mo
+
+
+//sudo kpartx -av paf.img
+//sudo mount /dev/mapper/loop1p1 /mnt/tmp
+// /dev/mapper/loop1p1     31649   111     31538   1% /mnt/tmp
+
+
+=== Goal
+
+The goal of this step is to add a booting __FreeDOS__ partition so that one can drop required payload into it (easier than editing the image).
+
+
+=== Pre-requisites
+
+. the USB stick ready (see <<id_usbstick_preparation>>),
+. the staging part of the __FreeDOS__ image generation (as explained in the document __Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with __FreeDOS__)__.
+
+
+
+
+=== Procedure – __FreeDOS__ installation
+
+
+. Mount the USB stick __freedos__ partition
++
+.mount – mount __freedos__ partition
+------------------------------------------
+$ sudo mount /dev/sdb1 <dir_mount_usbstick_main>
+$
+$ mount | grep sdb1
+/dev/sdb1 on <dir_mount_usbstick_main> type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$
+------------------------------------------
++
+. Copy the content of __FreeDOS__ from the staging area over to the USB stick
++
+.rsync – copy from the directory ++<dir_freedos_staging>++ onto ++<device_usbstick>++
+------------------------------------------
+$ rsync -vrihL ~/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/ <dir_mount_usbstick_main>
+sending incremental file list
+>f+++++++++ BACKUP-autoexec.bat-origin
+>f+++++++++ BACKUP-config.sys-origin
+>f+++++++++ BACKUP-syslinux.cfg-origin
+>f+++++++++ autoexec.bat
+>f+++++++++ config.sys
+>f+++++++++ syslinux.cfg
+cd+++++++++ fdos/
+>f+++++++++ fdos/LOCALIZE.txt
+[…]
+cd+++++++++ fdos/packages/unfmtx/
+cd+++++++++ img/
+>f+++++++++ img/fdodin06.144
+>f+++++++++ img/memdisk
+>f+++++++++ img/memtest.bin
+>f+++++++++ payload/gpg-dell-download-public_key.gpg
+>f+++++++++.payload/gpg-dell-security-public_key.gpg
+>f+++++++++ payload/bios/PER410-011200.exe
+[…]
+>f+++++++++ payload/sas-nonraid/SASHBA_Firmware_6GBPS-SAS-HBA_07.03.06.00_A11_ZPE.exe
+cd+++++++++ syslinux/
+>f+++++++++ syslinux/cat.c32
+>f+++++++++ syslinux/chain.c32
+[…]
+>f+++++++++ syslinux/whichsys.c32
+>f+++++++++ syslinux/zzjson.c32
+
+sent 140.60M bytes  received 15.67K bytes  93.74M bytes/sec
+total size is 140.51M  speedup is 1.00
+$
+$ tree <dir_mount_usbstick_main>
+<dir_mount_usbstick_main>
+├── autoexec.bat
+├── BACKUP-autoexec.bat-origin
+├── BACKUP-config.sys-origin
+├── BACKUP-syslinux.cfg-origin
+├── config.sys
+├── fdos
+│   ├── appinfo
+│   │   ├── append.lsm
+[…]
+│   │   └── xmgr.lsm
+│   ├── autoexec.txt
+│   ├── bin
+│   │   ├── 4DOS.COM
+[…]
+│   │   └── zip.exe
+│   ├── config.txt
+│   ├── cpi
+│   │   ├── ega10.cpx
+[…]
+│   │   └── ega.cpx
+│   ├── doc
+[…]
+│   ├── help
+[…]
+│   ├── LOCALIZE.txt
+│   ├── mtcp.cfg
+│   ├── nls
+[…]
+│   ├── packages
+[…]
+│   ├── postinst.bat
+│   └── postset.bat
+├── img
+│   ├── fdodin06.144
+│   ├── memdisk
+│   └── memtest.bin
+├── payload
+│   ├── bios
+│   │   ├── PER410-011200.exe
+│   │   └── PER410_BIOS 01 12 00 Release Notes.txt
+│   ├── chipset
+│   │   ├── INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-original_compressed.exe
+│   │   └── INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-uncompressed.exe
+│   ├── gpg-dell-download-public_key.gpg
+│   ├── gpg-dell-security-public_key.gpg
+│   ├── idrac
+│   │   ├── ESM_Firmware_78M0V_LN32_1.98_A00.BIN
+│   │   ├── ESM_Firmware_78M0V_LN32_1.98_A00.BIN.sign
+│   │   ├── iDRAC6_1.98_A00.exe
+│   │   └── iDRAC6_1.98_A00_ReleaseNotes.pdf
+│   ├── sas-nonraid
+│   │   ├── SASHBA_Firmware_6GBPS-SAS-HBA_07.03.06.00_A11_ZPE.exe
+│   │   ├── SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN
+│   │   └── SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN.sign
+│   └── sas-raid
+├── syslinux
+│   ├── cat.c32
+│   └── zzjson.c32
+[…]
+└── syslinux.cfg
+
+120 directories, 789 files
+$
+------------------------------------------
++
+. Install __syslinux__
++
+.syslinux – installation
+------------------------------------------
+$ sudo syslinux --directory syslinux --install /dev/sdb1
+$
+------------------------------------------
++
+. Un-mount the USB stick
++
+.mount – umount ++<device_usbstick>++
+------------------------------------------
+$ umount <dir_mount_usbstick_main>
+$
+$ mount | grep sdb
+$
+------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_grub]]
+== __Grub__ configuration
+
+
+
+
+=== Goal
+
+
+The goal here is to copy onto the USB stick a working __Grub2__ configuration file.
+
+
+
+
+=== Pre-requisites
+
+. all previous steps,
+. the __Grub2__ configuration tailored to our needs
+ **  __grub-bios.cfg__,
+ ** __grub-uefi.cfg__.
+
+
+
+
+
+=== Output
+
+
+* The file __grub.cfg__ is on the USB stick in the __/boot/grub/__ directory.
+
+
+
+
+=== Procedure – Configuration setup
+
+
+[NOTE]
+.Not much to do
+==========================================
+There is not much to do in this part as the configuration file is already prepared.
+
+And I do not want to maintain the configuration both in the documentation and in its file.
+==========================================
+
+. Mount the USB stick __main__ partition
++
+.mount – mount __main__ partition
+------------------------------------------
+$ sudo mount <dir_partition_main> <dir_mount_usbstick_main>
+$
+$ mount | grep <dir_usbstick_partition_main>
+<dir_usbstick_partition_main> on <dir_mount_usbstick_main> type ext4 (rw,relatime,data=ordered)
+$
+------------------------------------------
++
+. Copy the __Grub2__ configuration over to the USB stick
+ ** for the __BIOS__ version
++
+.cp – copy __grub.cfg__ into __<dir_mount_usbstick_main>/boot/grub/__ on ++<device_usbstick>++
+------------------------------------------
+$ sudo cp ~/data/timetombs/usbboot/grub-bios.cfg <dir_mount_usbstick_main>/boot/grub/grub.cfg
+FIXME
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/grub
+total 48
+drwxr-x--x 5 root root  4096 juil. 14 21:11 .
+drwxr-x--x 4 root root  4096 juil. 14 21:09 ..
+drwxr-x--x 2 root root  4096 juil. 14 20:51 fonts
+-rw-r----- 1 root root 13540 juil. 15 12:02 grub.cfg
+-rw-r----- 1 root root  1024 juil. 14 20:51 grubenv
+drwxr-x--x 2 root root 12288 juil. 14 20:51 i386-pc
+drwxr-x--x 2 root root  4096 juil. 14 20:51 locale
+$
+------------------------------------------
++
+ ** for the __UEFI__ version
++
+.cp – copy __grub-uefi.cfg__ into __<dir_mount_usbstick_main>/boot/grub/__ on ++<device_usbstick>++
+------------------------------------------
+$ sudo cp ~/data/timetombs/usbboot/grub-uefi.cfg <dir_mount_usbstick_main>/boot/grub/grub.cfg
+FIXME
+$
+$ sudo ls -al <dir_mount_usbstick_main>/boot/grub
+total 48
+drwx------ 5 root root  4096 juil. 16 16:17 .
+drwx------ 5 root root  4096 juil. 16 17:00 ..
+drwx------ 2 root root  4096 juil. 16 15:56 fonts
+-rw-r----- 1 root root 14219 juil. 16 16:56 grub.cfg
+-rw------- 1 root root  1024 juil. 16 15:56 grubenv
+drwx------ 2 root root  4096 juil. 16 15:56 locale
+drwx------ 2 root root 12288 juil. 16 15:56 x86_64-efi
+$
+------------------------------------------
++
+. un-mount the USB stick
++
+.mount – unmount ++<device_usbstick>++
+------------------------------------------
+$ sudo umount <dir_mount_usbstick_main>
+$
+$ mount | grep <dir_mount_usbstick_main>
+$
+------------------------------------------
+
+## USAGE$
+## Two main ways to set the filesystem encapsulated in an ISO one wants to boot$
+## 1- set it manually$
+##    loopback <var> (hdX,<partition_table_type>X)/path/to/iso$
+##    then use (<var>) in linux or initrd call$
+## 2- let Grub2 figure it out by looking for UUID$
+##    search --no-floppy --fs-uuid --set=<var> <uuid>$
+##    then use <var> in the loopback command$
+##    if there is no <var> defined after --set option,⋅$
+##     then the var 'root' is implicitly used$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[[id_data_partition_setup]]
+== __data__ partition setup
+
+
+
+
+=== Goal
+
+
+The goal in this part is to setup the third partition to store (persistent) data of the user when he is using of the live systems.
+
+This partition must be encrypted.
+
+
+
+
+=== Pre-requisites
+
+
+. the USB stick ready (see <<id_usbstick_preparation>>).
+
+
+
+
+=== Output
+
+
+The __data__ partition is
+
+* encrypted (using __LUKS__),
+* with an __ext4__ filesystem.
+
+
+
+
+=== Procedure – FIXME
+
+
+FIXME
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+== Annexes
+
+
+=== Hashes
+
+
+==== Debian
+
+.8.1 - amd64-i386
+------------------------------------------
+6a2c1654ba12f4839da47c8864233870898858ce  debian-8.1.0-amd64-i386-netinst.iso
+
+d8aee537610ca2e87469e61709cd8fca1f7122b999430dfae4bd793ab767bfac  debian-8.1.0-amd64-i386-netinst.iso
+
+0437b63c2b01dcee4b1df8f9bd27a1b28f95c000bb92104463fbed714ff39906e7f36098178864496b83abcf5f4491ef62a1f00fcdb47f700a086ba25ccd5371  debian-8.1.0-amd64-i386-netinst.iso
+------------------------------------------
+
+
+
+==== GParted
+
+.v.0.22.0-2
+------------------------------------------
+f52dc7fea44f5895699b58bcd8207cc2ec79f60937ca8452a05907a7960c0d20 gparted-live-0.22.0-2-amd64.iso 
+0e85af5db2c82daa1311cce9d3fc779c609e0e0933cad98b21a915f84e8c0fe7 gparted-live-0.22.0-2-i586.iso 
+b2f5691b3cb63cd2f0b68795f7344e63be30527a0a1641a7f2ece1efa1746b9f gparted-live-0.22.0-2-i686-pae.iso 
+d083c5d4ea6d690c4a3e22832dd54ca94167a546dd922c67e41a1717723b0afa gparted-live-0.22.0-2-amd64.zip 
+6415d65f2a337dc9e93a5fa64ad5dd414ea7ea8fd1957ee48f7354466552dcec gparted-live-0.22.0-2-i586.zip 
+8c96b3af45be753197a83d615a5bef2a1bdc6249b7d9a1e77cf00e5f245d59a3 gparted-live-0.22.0-2-i686-pae.zip
+------------------------------------------
+
+
+==== SystemRescueCD
+
+.v.4.5.3
+------------------------------------------
+16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3 systemrescuecd-x86-4.5.3.iso
+------------------------------------------
+
+
+==== GRML
+
+.v.2014.11
+------------------------------------------
+ -----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+ea7204ed77fa3df3a4ed68e3b8e2ad6f95d5242d  grml96-full_2014.11.iso
+ -----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCAAGBQJUZyrIAAoJEJaoeHK36jc39VMP/Rtu+jR30Y4Rq4LSwO0q8fvR
+P/j0ZGd9GcKzgNBMTh/s1Ea+e4g2VCGZSnXktdi/UYAPAjhGyNAeXQ3X2hzLLNaE
+p9hu9BsGxJIIBkYBV45hPtmxXFl+POXFZMacW7nuIqZR2cbBxDbtJQXb4W6iK/Hg
+kwknj9VHlVcU+pg3awUyQJVYPmv30w7CHgiFGG3+KstEYuG4gIRK5ICCu9zit+Rs
+l8M5JPe6PxvOMthhV9yHWm9ue8RL1xFoKkQizuJ7Np16FqPbYOrtgmBl3+vOBl7o
+u1tomtptRE7gZCdVNpwnF8g2RZZusNsXnfzsxR4SJ78KTU9ueoqQVCxWCvnFSzlV
+udCT2sOFBGu8DAMlAJ5ZRRVb/VSARVWCMmn/OhXWFfhdAIEGNYw9DfBqwaKaj8k1
+GRZbtfHnHL6EEHzGWboIDDg2qjEsEJwz9OQXOsvOqds7SiYRglknPy9wMl7O//WX
+g8RkvihoHgYBGHaqxIVeZWAhY8+2y93ZCZyTM5WXvEdYua7X/e/nJyqSrTZXCr3M
+tw3LgxUSzpejdh/mGosEMsY2HXAoE0ruDbB+jmWvGEPxPLQEaYFIjjyenPQtAt5T
+jqlNGAX5oJ3wlMjmXOyylTYgiDHaMSCyFYPC0vpMLtAgsP6d9PwiM/+6/vvDgLkA
+9bmmAI7yg/Rho9hRSlS+
+=6L94
+ -----END PGP SIGNATURE-----
+
+------------------------------------------
+
+
+==== Clonezilla
+
+.v.2.4.2-10
+------------------------------------------
+941669990fba74ad96fd0dcc899db6d8  clonezilla-live-2.4.2-10-amd64.iso
+b3555c6beb14e66f6aed2e7db1d6f410  clonezilla-live-2.4.2-10-i586.iso
+
+6320c55e63485b590da68484e2f70b920130e68e  clonezilla-live-2.4.2-10-amd64.iso
+e4b20b238972368143a56f2a5aec1916d65f1e93  clonezilla-live-2.4.2-10-i586.iso
+
+671229ed966beca8a59e811e60a37b2088ff9b0e6ee7a0ebb2c0b43fd04d08d8  clonezilla-live-2.4.2-10-amd64.iso
+a320b072593af6b390f213ee326c3aa6aad8ac088e265e8ae1a1301109433687  clonezilla-live-2.4.2-10-i586.iso
+------------------------------------------
+
+
+=== Bug reports
+
+
+==== parted
+
+In the man page
+
+* for __set__, __bios_grub__ is not mentioned
+* for __unit__, 'M' instead of 'MB' is working
+  ** actually it is probably due to the fact that mkpart default in megabytes
+
+
+
+
+// vim: set ft=asciidoc:

@@ -1,0 +1,503 @@
+= Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with __FreeDOS__)
+
+
+
+[NOTE]
+.BIOS or UEFI
+==========================================
+Is that for BIOS **xor** BIOS & UEFI?
+
+==========================================
+
+
+== libsmbios
+
+
+------------------------------------------
+$ sudo apt-get install smbios-utils
+[…]
+$
+------------------------------------------
+
+Play with ++smbios-sys-info++.
+
+[TIP]
+.HDR file
+==========================================
+Input to ++dellBiosUpdate-compat++ is a (raw) BIOS file or __HDR__ file.
+==========================================
+
+FIXME- get a fcking HDR -FIXME
+
+
+
+
+
+
+
+
+[[id_freedos]]
+== FreeDOS
+
+
+
+
+There are two directories:
+
+* __freetown-boot-freedos/__ -- the generic __FreeDOS__ image,
+* __freetown-boot-freedos-iris/__ -- the __FreeDOS__ image specific to __Iris__.
+The content of both are:
+
+* an image (done as described in this documentation),
+* __freetown-boot-freedos-component/__.
+
+__freetown-boot-freedos-component/__content in __freetown-boot-freedos-iris/__ are:
+
+* symlinks to ____freetown-boot-freedos/freetown-boot-freedos-component/__,
+* except for __payload/__ that is specific to __Iris__.
+
+
+
+=== Preamble
+
+
+This part presents how to create a bootable __FreeDOS__ image that can then be transfered to a real USB key to boot a real computer.
+
+This can be usefull to upgrade a BIOS that upgrade is made available only in a package for __DOS__.
+
+
+==== Sources
+
+* http://www.freedos.org/download/[]
+* http://joelinoff.com/blog/?p=431[]
+* http://chtaube.eu/computers/freedos/bootable-usb/image-generation-howto/[]
+* http://www.earth.li/~noodles/blog/2011/06/building-a-freedos-bootable-us.html[]
+
+
+==== Requirements
+
+* deb:++kpartx++ (version __0.5.0-5__)
+* deb:++syslinux++ (version __3:6.03+dfsg-5__)
+
+
+
+
+=== Short version
+
+
+. create an image with (see <<id_freedos_create_image>>)
+ .. one FAT16 partition
+ .. FAT32 file system
+. mount this image's partition (see <<id_freedos_mount_partition>>)
+. copy to this image's partition: (see <<id_freedos_copy_freedos_content>>)
+ .. the content of __FreeDOS__
+ .. the configuration files of __FreeDOS__
+. get the payload to copy to this image's partition (see <<id_freedos_copy_payload>>)
+. install __syslinux__ (see <<id_freedos_install_syslinux>>)
+ .. the bootloader itself
+ .. the whole content of __syslinux__ directory
+ .. the menu
+. unmount everything (see <<id_freedos_unmount>>)
+. copy to a (real) USB key (see <<id_freedos_transfer_to_usbkey>>)
+. test :) (and eventually \o/)
+
+
+
+
+[[id_freedos_create_image]]
+=== Create an image
+
+
+.Shell – Create an image – Large
+------------------------------------------
+$ dd if=/dev/zero of=freetown-boot-freedos.img bs=1M count=1945
+1945+0 records in
+1945+0 records out
+2039480320 bytes (2,0 GB) copied, 8,52278 s, 239 MB/s
+$
+------------------------------------------
+
+[NOTE]
+.Image size
+==========================================
+The image is:
+
+* large enough to put a few things on it (in the ++payload/++ directory) thus avoiding playing with USB keys to update a machine
+* but still under 2 Gbytes to be able to
+ ** avoid FAT32 file-system if necessary (actually not necessary for now),
+ ** recycle old USB keys.
+==========================================
+
+.Shell – Create an image – Small
+------------------------------------------
+$ dd if=/dev/zero of=freetown-boot-freedos.img bs=1M count=256
+255+0 records in
+255+0 records out
+267386880 bytes (267 MB) copied, 0,198471 s, 1,3 GB/s
+$
+------------------------------------------
+
+
+
+.Shell – Create partition – Large
+------------------------------------------
+$ sudo parted freetown-boot-freedos.img
+GNU Parted 3.2
+Using /home/lerouge/data/freetown/iris-usbkey_bios_upgrade/freetown-boot-freedos.img
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted) mklabel msdos                                                    
+(parted) mkpart primary fat16 0 100%                                      
+Warning: The resulting partition is not properly aligned for best performance.
+Ignore/Cancel? I                                                          
+(parted) set 1 boot on                                                    
+(parted) q
+$
+$ parted freetown-boot-freedos.img print 
+WARNING: You are not superuser.  Watch out for permissions.
+Model:  (file)
+Disk /home/lerouge/data/freetown/iris-usbkey_bios_upgrade/freetown-boot-freedos.img: 2039MB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags: 
+
+Number  Start  End     Size    Type     File system  Flags
+ 1      512B   2039MB  2039MB  primary               boot, lba
+$
+------------------------------------------
+
+[WARNING]
+.FAT16 vs. FAT32
+==========================================
+I lost three days because I was not using ++fat16++ for the __fs-type__ optionfootnote:[see ++man parted++ or https://www.gnu.org/software/parted/manual/html_chapter/parted_2.html#SEC18].
+
+With ++fat16++ the partition starts at __512B__ whereas with ++fat32++ it starts at __1049kB__.
+
+I never got the __syslinux__ menu with a partition starting at ++1049kB++…
+
+As a side note, here is what the __readme.txt__ of __FreeDOS__ v.1.1 is saying: __The Fat32 enabled kernel has gone out of the experimental phase for quite some time. It's now stable. However, not all FreeDOS programs can handle FAT32 properly yet.__
+
+==========================================
+
+.Shell – Create partition – Small
+------------------------------------------
+$ sudo parted --align minimal freetown-boot-freedos.img
+GNU Parted 3.2
+Using /home/lerouge/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos.img
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted)
+(parted) mklabel msdos                                                    
+(parted)                                                                  
+(parted) mkpart primary fat16 0 100%                                      
+(parted)                                                                  
+(parted) set 1 boot on                                                    
+(parted)                                                                  
+(parted) q
+$
+$ parted freetown-boot-freedos.img print
+$ WARNING: You are not superuser.  Watch out for permissions.
+Model:  (file)
+Disk /home/lerouge/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos.img: 267MB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags: 
+
+Number  Start  End    Size   Type     File system  Flags
+ 1      512B   267MB  267MB  primary               boot, lba
+
+$
+------------------------------------------
+
+
+
+[[id_freedos_mount_partition]]
+=== Mount the partition
+
+
+.Shell – Expose the image's partition
+------------------------------------------
+$ sudo kpartx -av freetown-boot-freedos.img
+add map loop2p1 (254:10): 0 3983359 linear /dev/loop2 1
+$ 
+------------------------------------------
+
+FIXME- would it work with an ++losetup -fv -o 16384++? -FIXME
+
+.Shell – Format the image's partition
+------------------------------------------
+$ sudo mkfs.fat -n freetownboo /dev/mapper/loop2p1 
+mkfs.fat 3.0.27 (2014-11-12)
+mkfs.fat: warning - lowercase labels might not work properly with DOS or Windows
+unable to get drive geometry, using default 255/63
+$
+------------------------------------------
+
+[WARNING]
+.FAT16 vs FAT32
+==========================================
+Did not use ++-F 16++ so by default that should be __fat32__ version. According to __parted__ the partition is indeed __fat32__.
+
+Actually, formating either in __fat32__ or in __fat16__ are working.
+==========================================
+
+.Mount the image's partition
+------------------------------------------
+$ sudo mount /dev/mapper/loop2p1 /mnt/tmp
+$
+------------------------------------------
+
+
+
+
+[[id_freedos_copy_freedos_content]]
+=== Copy __FreeDOS__ content
+
+
+__FreeDOS__ content is available in the ISO image __fd11src.iso__footnote:[++wget http://www.freedos.org/freedos/files/download/fd11src.iso++]
+
+[NOTE]
+.__FreeDOS__ 1.1 sha256
+==========================================
+------------------------------------------
+$ sha256sum fd11src.iso
+10190ff0d38f0d523f748504d5165fa5437492f42887ed8e3cfdad32781147b7  fd11src.iso
+$
+$ sha1sum fd11src.iso
+af6209905d048ce3ac01683e1d22501a632d7491  fd11src.iso
+$
+$ md5sum fd11src.iso
+2e0ab23bec79ff33071d80ea26f124dc  fd11src.iso
+$
+------------------------------------------
+
+Hashes of __fd11src.iso__ I found on the net (in mailing lists archives and on distribution serverfootnote:[http://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.1/fd11src.md5]) are:
+
+------------------------------------------
+MD5:  2e0ab23bec79ff33071d80ea26f124dc
+SHA1: af6209905d048ce3ac01683e1d22501a632d7491
+------------------------------------------
+
+==========================================
+
+
+.Shell – Get __FreeDOS__ content
+------------------------------------------
+$ mkdir -p /mnt/image/freedos
+$
+$ sudo mount -v -o loop,ro fd11src.iso /mnt/image/freedos
+mount: /dev/loop1 mounted on /mnt/image/freedos.
+$
+$ cd freetown-boot-freedos/freetown-boot-freedos-component/
+$ find /mnt/image/freedos/freedos/packages/base/*.zip -exec unzip -d fdos \{\} \;
+[…]
+inflating: freetown-boot-freedos/freetown-boot-freedos-component/fdos/bin/XMGR.SYS
+$
+------------------------------------------
+
+
+[[id_warning_case_sensitive_file_system]]
+[WARNING]
+.Case-sensitive file-system
+==========================================
+If you are extracting to a case-sensitive file-system you are out of luck as some directories are created in both lower-case and upper-case version.
+
+I merged manually…
+
+I also removed the ++source/++ directory.
+
+==========================================
+
+[NOTE]
+.Extract to the image
+==========================================
+One could extract the content of __fd11src.iso__ directly to the image too, thus avoiding the problem mentioned above (see <<id_warning_case_sensitive_file_system>>).
+
+Nevertheless, doing it on a “staging” area allows modifications and probably streamlining the process of building the final image.
+==========================================
+
+.rsync – Copy content
+------------------------------------------
+$ sudo rsync -vrihL freetown-boot-freedos/freetown-boot-freedos-component/ /mnt/tmp
+sending incremental file list
+>f+++++++++ BACKUP-autoexec.bat-origin
+>f+++++++++ BACKUP-config.sys-origin
+>f+++++++++ BACKUP-syslinux.cfg-origin
+>f+++++++++ autoexec.bat
+>f+++++++++ config.sys
+>f+++++++++ syslinux.cfg
+cd+++++++++ fdos/
+[…]
+cd+++++++++ img/
+>f+++++++++ img/fdodin06.144
+>f+++++++++ img/memdisk
+>f+++++++++ img/memtest.bin
+cd+++++++++ payload/
+cd+++++++++ syslinux/
+>f+++++++++ syslinux/cat.c32
+[…]
+>f+++++++++ syslinux/whichsys.c32
+>f+++++++++ syslinux/zzjson.c32
+
+sent 11.89M bytes  received 15.41K bytes  7.94M bytes/sec
+total size is 11.84M  speedup is 0.99
+$
+------------------------------------------
+
+
+//------------------------------------------
+//$ cd freetown-boot-freedos-component/
+//$
+//$ sudo cp -r fdos /mnt/tmp
+//$ sudo cp autoexec.bat config.sys  /mnt/tmp
+//$
+//------------------------------------------
+
+
+
+
+[[id_freedos_copy_payload]]
+=== Copy payload
+
+
+There is probably a (good) reason to boot using __FreeDOS__ (like upgrading a firmware that upgrade program is made available for DOS only). Here is the step when you put everything you will need (there are 2 Gbytes for the large USB stick and 256 Mbytes for the small one to be filled in).
+
+.Shell – Copy the payload to the image
+------------------------------------------
+$ cd freetown-boot-freedos-iris/freetown-boot-freedos-component/
+$
+$ rsync -vrihl payload /mnt/tmp
+sending incremental file list
+>f+++++++++ payload/gpg-dell-download-public_key.gpg
+>f+++++++++ payload/gpg-dell-security-public_key.gpg
+cd+++++++++ payload/bios/
+>f+++++++++ payload/bios/PER410-011200.exe
+>f+++++++++ payload/bios/PER410_BIOS 01 12 00 Release Notes.txt
+cd+++++++++ payload/chipset/
+>f+++++++++ payload/chipset/INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-original_compressed.exe
+>f+++++++++ payload/chipset/INTEL_5500-5520-CHIPSET-SOFT_A03_R295077-uncompressed.exe
+cd+++++++++ payload/idrac/
+>f+++++++++ payload/idrac/ESM_Firmware_78M0V_LN32_1.98_A00.BIN
+>f+++++++++ payload/idrac/ESM_Firmware_78M0V_LN32_1.98_A00.BIN.sign
+>f+++++++++ payload/idrac/iDRAC6_1.98_A00.exe
+>f+++++++++ payload/idrac/iDRAC6_1.98_A00_ReleaseNotes.pdf
+cd+++++++++ payload/sas-nonraid/
+>f+++++++++ payload/sas-nonraid/SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN
+>f+++++++++ payload/sas-nonraid/SAS-Non-RAID_Firmware_K161K_LN_07.03.06.00_A11.BIN.sign
+>f+++++++++ payload/sas-nonraid/SASHBA_Firmware_6GBPS-SAS-HBA_07.03.06.00_A11_ZPE.exe
+cd+++++++++ payload/sas-raid/
+
+sent 128.71M bytes  received 304 bytes  257.42M bytes/sec
+total size is 128.68M  speedup is 1.00
+$
+------------------------------------------
+
+
+
+
+[[id_freedos_install_syslinux]]
+=== Install __syslinux__
+
+
+.Shell – Install __syslinux__
+------------------------------------------
+$ cd freetown-boot-freedos-component/
+$
+$ sudo mkdir syslinux
+$
+$ sudo cp /usr/lib/syslinux/modules/bios syslinux/
+$
+$ sudo syslinux --directory syslinux --install /dev/mapper/loop2p1
+$
+$ sudo cp -r syslinux /mnt/tmp/
+$
+$ sudo cp syslinux.cfg /mnt/tmp
+$
+------------------------------------------
+
+[CAUTION]
+.++chain.c32++
+==========================================
+In other words ++chain.c32++ is **not** taken from the __FreeDOS__ sources but from the deb:++syslinux++ package.
+
+And we take the whole content of __syslinux__ bios modules otherwise one systematically get the error message __failed to load com32 <path>/chain.c32__.
+==========================================
+
+[NOTE]
+.++--stupid++
+==========================================
+If __syslinux__ does not boot, one can try to re-install it with the ++--stupid++ option.
+==========================================
+
+[TIP]
+.Once ++freetown-boot-freedos-component/++ is ready
+==========================================
+Once your ++freetown-boot-freedos-component/++ directory is ready (i.e. has all the required components – ++syslinux/++, ++freedos/++ and ++img/++ – and optional ones – ++payload/++), one can just:
+
+
+------------------------------------------
+$ cd freetown-boot-freedos-iris/freetown-boot-freedos-component/
+$
+$ rsync -vrihl . /mnt/tmp/
+$
+$ sudo syslinux --directory syslinux --install /dev/mapper/loop2p1
+$
+------------------------------------------
+==========================================
+
+//$ sudo cp -r * /mnt/tmp
+
+
+[[id_freedos_unmount]]
+=== Unmount
+
+
+.Unmount
+------------------------------------------
+$ sudo umount /mnt/tmp
+$
+$ cd <dir_freedos_img>
+$
+$ sudo kpartx -vd freetown-boot-freedos.img
+del devmap : loop2p1
+loop deleted : /dev/loop2
+$
+$ sudo losetup --list
+
+$
+------------------------------------------
+
+
+
+
+[[id_freedos_transfer_to_usbkey]]
+=== Transfer to a USB key
+
+
+.Transfer on a usbkey
+------------------------------------------
+$ sudo dd if=freetown-boot-freedos.img of=/dev/sdb bs=4M; sync
+
+3983360+0 records in
+3983360+0 records out
+2039480320 bytes (2,0 GB) copied, 1374,79 s, 1,5 MB/s
+$
+------------------------------------------
+
+[TIP]
+.Wait…
+==========================================
+Wait for a few (25) minutes…
+==========================================
+
+
+Tested with two USB keys:
+
+* __USB Flash Memory PMAP__ (2 Gbytes),
+* __Verbatim Store 'n' Go 3.0__ (4 Gbytes),
+
+on two machines:
+
+* home built desktop machine (EFI),
+* __Eee PC 901__.
+
+
+// vim: set ft=asciidoc:
