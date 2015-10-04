@@ -773,14 +773,19 @@ asciidoc.install(2);
 <h2 id="_preamble">1. Preamble</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Why?</p></div>
-<div class="paragraph"><p>First to reach the goals set below, inspired by my need to update some firmwares which upgrades are only available as <em>MS-DOS</em> binaries and some blog posts by <a href="http://www.preining.info/blog/contact/">Norbert Preining</a>.</p></div>
-<div class="paragraph"><p>But also just because I wanted to try. A lot of simpler solutions (everything in <em>FAT</em> for instance) are existing. I wanted to test and have fun :)</p></div>
-<div class="paragraph"><p>Bottom of the line, with <em>UEFI</em> solution, <em>FreeDOS</em> is not working.</p></div>
-<div class="paragraph"><p>And the setup of the <em>data</em> partition is not explained here.</p></div>
+<div class="paragraph"><p>First to reach the goals set below (see <a href="#id_preamble_goal">[id_preamble_goal]</a>), triggered by a very old need to boot “secure” system on any machine, lately by my need to update some firmwares which upgrades are only available as <em>MS-DOS</em> binaries and some blog posts by <a href="http://www.preining.info/blog/contact/">Norbert Preining</a>.</p></div>
+<div class="paragraph"><p>But also just because I wanted to try. A lot of simpler solutions (everything in <em>FAT</em> or not using <em>GPT</em> parition table, for instance) are existing. I wanted to test and have fun :)</p></div>
+<div class="paragraph"><p>Bottom of the line, with <em>(U)EFI</em> solution, <em>FreeDOS</em> is not working.</p></div>
+<div class="paragraph"><p>And the setup of the <em>data</em> partition is not explained here for now (as of 2015-09).</p></div>
 <div class="sect2">
 <h3 id="id_preamble_goal">1.1. Goal / requirements</h3>
 <div class="paragraph"><p>The goal is the following (as of 2015-06): get a multi-purpose / multi-boot USB stick</p></div>
 <div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+use modern partition table,
+</p>
+</li>
 <li>
 <p>
 able to boot
@@ -848,30 +853,35 @@ and have the solution as easily as possible maintenable (when one of the systems
 <div class="sect2">
 <h3 id="id_preamble_implementation">1.2. Implementation – Big picture</h3>
 <div class="sect3">
-<h4 id="_live_systems">1.2.1. Live systems</h4>
+<h4 id="_modern_partition_table">1.2.1. Modern partition table</h4>
+<div class="paragraph"><p>This means dropping the <em>msdos</em> partition table and using the <em>GPT</em> one.</p></div>
+<div class="paragraph"><p>The problem here is that if some <em>BIOS</em> can read a <em>GPT</em> partition table if one add a specific partition that might not be easy. <em>GPT</em> is (from my point of view) clearly designed to work with <em>(U)EFI</em> systems (on booting storage devices, at least).</p></div>
+</div>
+<div class="sect3">
+<h4 id="_live_systems">1.2.2. Live systems</h4>
 <div class="paragraph"><p>This requirement is easy to fullfil. One just have to download the wanted systems and store them on the USB stick.</p></div>
 <div class="paragraph"><p>The constraint being the size required. Images to boot are generally under or roughly a 1 Gbyte (the main exception – as of 2015-06 – being <em>Kali</em> that weigths 3,1 Gbytes). So having 4 to 8 Gbytes should be OK (the more space, the more live system images can be stored and therefore booted).</p></div>
 <div class="paragraph"><p><em>FreeDOS</em> is a bit special as if it is really tiny, it must have some room available to store firmware upgrades. Nowadays, those firmware upgrades can be up to a few tens of mega bytes. So, 256 Mbytes should be OK.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_machine_diversity">1.2.2. Machine diversity</h4>
-<div class="paragraph"><p>Nowadays and roughly since 2011/2012, we have computers using <em>BIOS</em> xor <em>UEFI</em>.</p></div>
+<h4 id="_machine_diversity">1.2.3. Machine diversity</h4>
+<div class="paragraph"><p>Nowadays and roughly since 2011/2012, we have computers using <em>BIOS</em> xor <em>(U)EFI</em>.</p></div>
 <div class="paragraph"><p>Ideally, the same USB stick should be able to boot both kind of machines.</p></div>
-<div class="paragraph"><p>It will not be the case first; the solution will be either a USB stick to boot <em>BIOS</em> machines <strong>xor</strong> <em>UEFI</em> ones (see <a href="#id_bigpicture">[id_bigpicture]</a> about those two ways). This document might be updated later on with such a solution.</p></div>
+<div class="paragraph"><p>It will not be the case first; the solution will be either a USB stick to boot <em>BIOS</em> machines <strong>xor</strong> <em>(U)EFI</em> ones (see <a href="#id_bigpicture">[id_bigpicture]</a> about those two ways). This document might be updated later on with such a solution.</p></div>
 </div>
 <div class="sect3">
-<h4 id="_user_data">1.2.3. User data</h4>
+<h4 id="_user_data">1.2.4. User data</h4>
 <div class="paragraph"><p>This requirement is also easy. One will have to add a partition for that. This partition will be crypted using <em>LUKS</em>.</p></div>
 <div class="paragraph"><p>A few giga bytes should be enough (for everybody©®™).</p></div>
 </div>
 <div class="sect3">
-<h4 id="_maintenance">1.2.4. Maintenance</h4>
+<h4 id="_maintenance">1.2.5. Maintenance</h4>
 <div class="paragraph"><p>This requirement may be tricky.</p></div>
 <div class="paragraph"><p>Ideally, one should just have to drop a new (updated) ISO on the USB stick. I can see three ways to do that:</p></div>
 <div class="olist arabic compact"><ol class="arabic">
 <li>
 <p>
-keep the name of the ISO downloaded: this means the links in <em>Grub2</em> configuration must be updated too. The less one touch a configuration file, the better it is.
+keep the name of the ISO downloaded: this means the links in <em>Grub2</em> configuration must be updated too. The less one touch a configuration file, the better it is,
 </p>
 </li>
 <li>
@@ -901,7 +911,7 @@ all live systems one may want be able to boot might not be bootable as an ISO im
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="id_bigpicture_bios">1.2.5. Big picture – BIOS only</h4>
+<h4 id="id_bigpicture_bios">1.2.6. Big picture – BIOS only</h4>
 <div class="paragraph"><p><em>BIOS</em> does not care about <em>msdos</em> or <em>GPT</em> partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).</p></div>
 <div class="admonitionblock">
 <table><tr>
@@ -968,7 +978,7 @@ vr6+wTfK/4tEfzeeMmUKkydPzhg8jJAAREgEg0H6+vrQNC2pFL8ZUVWVrKws8vPzycnJQVXVjH/s
 <td class="content">
 <div class="title">BIOS only meaning</div>
 <div class="paragraph"><p>By “BIOS only”, one means <em>Grub2</em> version <em>i386-pc</em> (<strong>not</strong> <em>x86_64-uefi</em>) and <em>msdos</em> partition table.</p></div>
-<div class="paragraph"><p>This USB stick is made to boot on computer using a <em>BIOS</em> (<strong>not</strong> an <em>[U]EFI</em>).</p></div>
+<div class="paragraph"><p>This USB stick is made to boot on computer using a <em>BIOS</em> (<strong>not</strong> an <em>(U)EFI</em>).</p></div>
 <div class="paragraph"><p>By lack of time and hardware available to test, I gave up the combinaison <em>BIOS</em> / <em>GPT</em> partition table. This has the side advantage to not have to deal with a <em>BIOS boot partition</em><span class="footnote"><br />[<a href="https://en.wikipedia.org/wiki/BIOS_boot_partition">https://en.wikipedia.org/wiki/BIOS_boot_partition</a>]<br /></span> (aka <em>EF02</em>) and its alignment subtilities.</p></div>
 </td>
 </tr></table>
@@ -1179,7 +1189,7 @@ content the user would like to keep when using a live system (such as <em>Tails<
 </ul></div>
 </div>
 <div class="sect3">
-<h4 id="id_bigpicture_uefi">1.2.6. Big picture – UEFI</h4>
+<h4 id="id_bigpicture_uefi">1.2.7. Big picture – (U)EFI</h4>
 <div class="paragraph"><p>One USB stick with</p></div>
 <div class="ulist compact"><ul>
 <li>
@@ -1189,7 +1199,7 @@ a <em>GPT</em> partition table,
 </li>
 <li>
 <p>
-three partitions,
+four partitions,
 </p>
 <div class="olist loweralpha compact"><ol class="loweralpha">
 <li>
@@ -1209,12 +1219,7 @@ filesystem: <em>fat32</em>,
 </li>
 <li>
 <p>
-GUID: <em>C12A7328-F81F-11D2-BA4B-00A0C93EC93B</em>,
-</p>
-</li>
-<li>
-<p>
-UUID: <code>DCBE-BB01</code>,
+UUID: <code>FEAA-AEAE</code>,
 </p>
 </li>
 <li>
@@ -1229,7 +1234,7 @@ content:
 <div class="ulist compact"><ul>
 <li>
 <p>
-the partition required by <em>UEFI</em> compliant machines,
+the partition required by <em>(U)EFI</em> compliant machines,
 </p>
 </li>
 <li>
@@ -1239,7 +1244,7 @@ boot loader early stuff,
 </li>
 <li>
 <p>
-<em>UEFI</em> stuff…
+<em>EFI</em> stuff…
 </p>
 </li>
 </ul></div>
@@ -1263,12 +1268,12 @@ filesystem:  <em>fat32</em>,
 </li>
 <li>
 <p>
-UUID: <code>CFCD-03C7</code>,
+UUID: <code>022A-3547</code>,
 </p>
 </li>
 <li>
 <p>
-Grub2 name: <em>(hd0,gpt1)</em>
+Grub2 name: <em>(hd0,gpt2)</em>
 </p>
 </li>
 <li>
@@ -1307,12 +1312,12 @@ filesystem: <em>ext</em>,
 </li>
 <li>
 <p>
-UUID: <code>28345150-0177-4076-89a5-38b7fdff26c4</code>,
+UUID: <code>bda27c38-16ec-4d2a-b299-04c9416594a2</code>,
 </p>
 </li>
 <li>
 <p>
-Grub2 name: <em>(hd0,gpt2)</em>,
+Grub2 name: <em>(hd0,gpt3)</em>,
 </p>
 </li>
 <li>
@@ -1351,12 +1356,12 @@ filesystem: <em>ext4</em> in a <em>LUKS_</em> cryptocontainer,
 </li>
 <li>
 <p>
-UUID: <code>a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb</code>,
+UUID: <code>462776d2-c90c-4e80-9373-595b9f33f671</code>,
 </p>
 </li>
 <li>
 <p>
-Grub2 name: <em>(hd0,gpt3)</em>,
+Grub2 name: <em>(hd0,gpt4)</em>,
 </p>
 <div class="admonitionblock">
 <table><tr>
@@ -1510,7 +1515,7 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 <div class="ulist compact"><ul>
 <li>
 <p>
-<em>EFI</em> version: deb:<em>grub-efi-amd64</em> (2.02\~beta2-26 0)
+<em>EFI</em> version: deb:<em>grub-efi-amd64</em> (2.02\~beta2-28 0)
 </p>
 </li>
 <li>
@@ -1522,12 +1527,12 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 </li>
 <li>
 <p>
-<em>mkfs.fat</em>: deb:<em>dosfstools</em> (3.0.28-1)
+<em>mkfs.fat</em>: deb:<em>dosfstools</em> (3.0.28-2)
 </p>
 </li>
 <li>
 <p>
-<em>syslinux</em>: deb:<em>syslinux-common</em> (3:6.03+dfsg-7)
+<em>syslinux</em>: deb:<em>syslinux-common</em> (3:6.03+dfsg-10)
 </p>
 <div class="ulist compact"><ul>
 <li>
@@ -1561,6 +1566,11 @@ not mandatory as <em>cp</em> can be used
 <a href="http://dl.amnesia.boum.org/tails/stable/tails-i386-1.4/tails-i386-1.4.iso">Tails, v.1.4</a>,
 </p>
 </li>
+<li>
+<p>
+<a href="http://dl.amnesia.boum.org/tails/stable/tails-i386-1.6/tails-i386-1.6.iso">Tails, v.1.6</a>,
+</p>
+</li>
 </ul></div>
 </li>
 <li>
@@ -1571,6 +1581,11 @@ not mandatory as <em>cp</em> can be used
 <li>
 <p>
 <a href="http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.5.3/systemrescuecd-x86-4.5.3.iso?r=&amp;ts=1434488949&amp;use_mirror=softlayer-dal">http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.5.3/systemrescuecd-x86-4.5.3.iso?r=&amp;ts=1434488949&amp;use_mirror=softlayer-dal</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.6.0/systemrescuecd-x86-4.6.0.iso?r=&amp;ts=1443715745&amp;use_mirror=tcpdiag">http://downloads.sourceforge.net/project/systemrescuecd/sysresccd-x86/4.6.0/systemrescuecd-x86-4.6.0.iso?r=&amp;ts=1443715745&amp;use_mirror=tcpdiag</a>
 </p>
 </li>
 </ul></div>
@@ -1600,6 +1615,11 @@ not mandatory as <em>cp</em> can be used
 <a href="http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i686-pae.iso?r=&amp;ts=1434488915&amp;use_mirror=softlayer-dal">http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.22.0-2/gparted-live-0.22.0-2-i686-pae.iso?r=&amp;ts=1434488915&amp;use_mirror=softlayer-dal</a>
 </p>
 </li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.23.0-1/gparted-live-0.23.0-1-amd64.iso?r=&amp;ts=1443715879&amp;use_mirror=superb-dca2">http://downloads.sourceforge.net/project/gparted/gparted-live-stable/0.23.0-1/gparted-live-0.23.0-1-amd64.iso?r=&amp;ts=1443715879&amp;use_mirror=superb-dca2</a>
+</p>
+</li>
 </ul></div>
 </li>
 <li>
@@ -1612,6 +1632,11 @@ not mandatory as <em>cp</em> can be used
 <a href="http://cdimage.kali.org/kali-1.1.0a/kali-linux-1.1.0a-amd64.iso">Kali 64b v.1.1.0a</a>
 </p>
 </li>
+<li>
+<p>
+<a href="http://cdimage.kali.org/kali-2.0/kali-linux-2.0-amd64.iso">Kali 64b v.2.0</a>
+</p>
+</li>
 </ul></div>
 </li>
 <li>
@@ -1622,6 +1647,11 @@ not mandatory as <em>cp</em> can be used
 <li>
 <p>
 <a href="http://cdimage.debian.org/debian-cd/8.1.0/multi-arch/iso-cd/debian-8.1.0-amd64-i386-netinst.iso">http://cdimage.debian.org/debian-cd/8.1.0/multi-arch/iso-cd/debian-8.1.0-amd64-i386-netinst.iso</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://cdimage.debian.org/debian-cd/8.2.0/multi-arch/iso-cd/debian-8.2.0-amd64-i386-netinst.iso">http://cdimage.debian.org/debian-cd/8.2.0/multi-arch/iso-cd/debian-8.2.0-amd64-i386-netinst.iso</a>
 </p>
 </li>
 </ul></div>
@@ -1651,6 +1681,11 @@ not mandatory as <em>cp</em> can be used
 <li>
 <p>
 <a href="http://clonezilla.org/downloads/download.php?branch=stable">http://clonezilla.org/downloads/download.php?branch=stable</a>
+</p>
+</li>
+<li>
+<p>
+<a href="http://downloads.sourceforge.net/project/clonezilla/clonezilla_live_testing/2.4.2-56/clonezilla-live-2.4.2-56-amd64.iso?r=&amp;ts=1443716100&amp;use_mirror=iweb">http://downloads.sourceforge.net/project/clonezilla/clonezilla_live_testing/2.4.2-56/clonezilla-live-2.4.2-56-amd64.iso?r=&amp;ts=1443716100&amp;use_mirror=iweb</a>
 </p>
 </li>
 </ul></div>
@@ -1753,22 +1788,22 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 </li>
 <li>
 <p>
-<code>&lt;dir_usbstick_partition_esp&gt;</code> (<code>/dev/sdb1</code>): path of the <em>ESP</em> partition (<em>UEFI</em> solution)
+<code>&lt;dir_usbstick_partition_esp&gt;</code> (<em>n/a</em> for <em>BIOS</em> version and <code>/dev/sdb1</code> for <em>(U)EFI</em> version): path of the <em>ESP</em> partition (<em>(U)EFI</em> solution)
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_usbstick_partition_freedos&gt;</code> (<code>/dev/sdb1</code> for <em>BIOS</em> version and <code>/dev/sdb2</code> for <em>UEFI</em> version): path of the <em>FreeDOS</em> partition
+<code>&lt;dir_usbstick_partition_freedos&gt;</code> (<code>/dev/sdb1</code> for <em>BIOS</em> version and <code>/dev/sdb2</code> for <em>(U)EFI</em> version): path of the <em>FreeDOS</em> partition
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_usbstick_partition_main&gt;</code> (<code>/dev/sdb2</code> for <em>BIOS</em> version and <code>/dev/sdb3</code> for <em>UEFI</em> version): path of the <em>main</em> partition
+<code>&lt;dir_usbstick_partition_main&gt;</code> (<code>/dev/sdb2</code> for <em>BIOS</em> version and <code>/dev/sdb3</code> for <em>(U)EFI</em> version): path of the <em>main</em> partition
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_usbstick_partition_data&gt;</code> (<code>/dev/sdb3</code> for <em>BIOS</em> version and <code>/dev/sdb4</code> for <em>UEFI</em> version): path of the <em>data</em> partition
+<code>&lt;dir_usbstick_partition_data&gt;</code> (<code>/dev/sdb3</code> for <em>BIOS</em> version and <code>/dev/sdb4</code> for <em>(U)EFI</em> version): path of the <em>data</em> partition
 </p>
 </li>
 <li>
@@ -1778,27 +1813,22 @@ GNQfHLG+TyMTkAVEr88xQfVnkBg7GAKixSIykDYQsL21/wFkW/B5QqT9lwAAAABJRU5ErkJggg==" />
 </li>
 <li>
 <p>
-<code>&lt;dir_mount_usbstick_esp</code> (<code>/media/tmp/boot/efi</code>): directory where the <em>esp</em> partition (see <a href="#id_bigpicture_uefi">[id_bigpicture_uefi]</a>) on our USB stick is mounted
+<code>&lt;dir_mount_usbstick_esp</code> (<code>/media/tmp/boot/esp</code>): directory where the <em>esp</em> partition (see <a href="#id_bigpicture_uefi">[id_bigpicture_uefi]</a>) on our USB stick is mounted
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_mount_usbstick_freedos&gt;</code> (<code>/media/tmp/</code>): directory where the <em>freedos</em> partition (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) on our USB stick is mounted
+<code>&lt;dir_mount_usbstick_freedos&gt;</code> (<code>/media/free/</code>): directory where the <em>freedos</em> partition (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) on our USB stick is mounted
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_mount_usbstick_main&gt;</code> (<code>/media/tmp/</code>): directory where the <em>main</em> (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) partition on our USB stick is mounted
+<code>&lt;dir_mount_usbstick_main&gt;</code> (<code>/media/main/</code>): directory where the <em>main</em> (see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>) partition on our USB stick is mounted
 </p>
 </li>
 <li>
 <p>
-<code>&lt;dir_mount_usbstick_data&gt;</code> (<code>/media/tmp/</code>): directory where the <em>data</em>(see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>)  partition on our USB stick is mounted
-</p>
-</li>
-<li>
-<p>
-<code>&lt;dir_mount_image&gt;</code> (<code>/mnt/tmp/</code>): directory where (downloaded) ISO images are mounted
+<code>&lt;dir_mount_usbstick_data&gt;</code> (<code>/media/data/</code>): directory where the <em>data</em>(see <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a>)  partition on our USB stick is mounted
 </p>
 </li>
 <li>
@@ -1845,7 +1875,12 @@ and blog posts by <a href="http://www.preining.info/blog/contact/">Norbert Prein
 </li>
 <li>
 <p>
-and <a href="http://www.preining.info/software/grub.cfg">his <em>Grub2</em> configuration</a>.
+<a href="http://www.preining.info/software/grub.cfg">his <em>Grub2</em> configuration</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="http://www.preining.info/blog/2015/09/multi-boot-stick-update-tails-1-6-sysrescd-4-6-0-gparted-0-23-debian-8-2/"><em>Multi-boot stick update: TAILS 1.6, SysresCD 4.6.0, GParted 0.23, Debian 8.2</em></a> on 2015-09-29.
 </p>
 </li>
 </ul></div>
@@ -2014,7 +2049,7 @@ install <em>Grub2</em> onto the USB stick
 </li>
 <li>
 <p>
-for the <em>UEFI</em> solution
+for the <em>(U)EFI</em> solution
 </p>
 <div class="olist loweralpha compact"><ol class="loweralpha">
 <li>
@@ -2029,7 +2064,7 @@ create four partitions
 <div class="olist lowerroman compact"><ol class="lowerroman">
 <li>
 <p>
-<em>fat</em>, 100 Gbytes for <em>UEFI system partition</em> (<em>ESP</em>),
+<em>fat</em>, 100 Gbytes for <em>EFI system partition</em> (<em>ESP</em>),
 </p>
 </li>
 <li>
@@ -2051,7 +2086,7 @@ size requirements are function of the number of live systems one wants to be abl
 </li>
 <li>
 <p>
-<em>LUKS</em>/<em>ext4</em>, whatever Gbytes for user&#8217;s peristent data
+<em>LUKS</em>/<em>ext4</em>, whatever Gbytes for user&#8217;s persistent data
 </p>
 </li>
 </ol></div>
@@ -2108,8 +2143,8 @@ test
 </p>
 </li>
 </ol></div>
-<div class="paragraph"><p>Reading <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a> might help getting the big picture.</p></div>
-<div class="paragraph"><p>It should be understood that <em>FreeDOO</em> can be booted in two ways :</p></div>
+<div class="paragraph"><p>Reading <a href="#id_bigpicture_bios">[id_bigpicture_bios]</a> or <a href="#id_bigpicture_uefi">[id_bigpicture_uefi]</a> might help getting the big picture.</p></div>
+<div class="paragraph"><p>It should be understood that <em>FreeDOS</em> can be booted in two ways :</p></div>
 <div class="olist arabic compact"><ol class="arabic">
 <li>
 <p>
@@ -2329,15 +2364,15 @@ Yes/No? y
 Information: You may need to update /etc/fstab.
 $
 $ sudo blkid &lt;device_usbstick&gt;*
-&lt;device_usbstick&gt;: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
-&lt;device_usbstick&gt;1: PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
-&lt;device_usbstick&gt;2: PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
-&lt;device_usbstick&gt;3: PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
-&lt;device_usbstick&gt;4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+/dev/sdb: UUID="2015-09-20-21-10-52-00" LABEL="TAILS 1.6 - 20150920" TYPE="iso9660" PTUUID="6dc560c0-dd80-4707-847c-76d957928aac" PTTYPE="gpt"
+/dev/sdb1: PARTLABEL="primary" PARTUUID="b1fd8791-9334-48e4-84ea-33af960f9232"
+/dev/sdb2: PARTLABEL="primary" PARTUUID="69bf191d-b6ef-4144-a9f4-5ef25fd701dc"
+/dev/sdb3: PARTLABEL="primary" PARTUUID="3bf8b361-034c-49ed-87e2-3fc9da5d1020"
+/dev/sdb4: PARTLABEL="primary" PARTUUID="f5ebe74d-9203-422a-9219-a9d7d8bcb1fc"$
 $
 $ sudo parted &lt;device_usbstick&gt; print
 Model: Corsair UFD (scsi)
-Disk &lt;device_usbstick&gt;: 32,1GB
+Disk /dev/sdb: 32,1GB
 Sector size (logical/physical): 512B/512B
 Partition Table: gpt
 Disk Flags:
@@ -2346,7 +2381,7 @@ Number  Start   End     Size    File system  Name     Flags
  1      17,4kB  100MB   100MB                primary  boot, esp
  2      100MB   356MB   256MB                primary  boot, esp
  3      356MB   10,0GB  9644MB               primary
- 4      10,0GB  12,0GB  2000MB  ext4         primary
+ 4      10,0GB  12,0GB  2000MB               primary
 
 $</code></pre>
 </div></div>
@@ -2523,7 +2558,7 @@ filesystem has 2 16-bit FATs and 4 sectors per cluster.
 FAT size is 192 sectors, and provides 48715 clusters.
 There is 1 reserved sector.
 Root directory contains 512 slots and uses 32 sectors.
-Volume ID is dcbebb01, volume label multib_esp .
+Volume ID is feaaaeae, volume label multib_esp .
 $
 $ sudo mkfs.fat -v -F 32 -n multib_free &lt;device_usbstick&gt;2
 mkfs.fat 3.0.28 (2015-05-16)
@@ -2536,7 +2571,7 @@ drive number 0x80;
 filesystem has 2 32-bit FATs and 1 sector per cluster.
 FAT size is 3846 sectors, and provides 492276 clusters.
 There are 32 reserved sectors.
-Volume ID is def41e1d, volume label multib_free.
+Volume ID is 022a3547, volume label multib_free.
 $
 $ sudo mkfs.ext4 -v -m 0 -L multib_main &lt;device_usbstick&gt;3
 mke2fs 1.42.13 (17-May-2015)
@@ -2553,7 +2588,7 @@ Maximum filesystem blocks=2411724800
 72 block groups
 32768 blocks per group, 32768 fragments per group
 8176 inodes per group
-Filesystem UUID: 28345150-0177-4076-89a5-38b7fdff26c4
+Filesystem UUID: bda27c38-16ec-4d2a-b299-04c9416594a2
 Superblock backups stored on blocks:
    32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
 
@@ -2562,11 +2597,34 @@ Writing inode tables: done
 Creating journal (32768 blocks): done
 Writing superblocks and filesystem accounting information: done
 
-$
+$ sudo mkfs.ext4 -v -m 0 -L multib_data &lt;device_usbstick&gt;4
+mke2fs 1.42.13 (17-May-2015)
+fs_types for mke2fs.conf resolution: 'ext4'
+Filesystem label=multib_data
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+122160 inodes, 488281 blocks
+0 blocks (0.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=503316480
+15 block groups
+32768 blocks per group, 32768 fragments per group
+8144 inodes per group
+Filesystem UUID: 462776d2-c90c-4e80-9373-595b9f33f671
+Superblock backups stored on blocks:
+   32768, 98304, 163840, 229376, 294912
+
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (8192 blocks): done
+Writing superblocks and filesystem accounting information: done
+
 $ sudo parted &lt;device_usbstick&gt; print
 Model: Corsair UFD (scsi)
 Disk &lt;device_usbstick&gt;: 32,1GB
-Sector size (logical/physical): 512B/512B
+Sector: 512B/512B
 Partition Table: gpt
 Disk Flags:
 
@@ -2578,11 +2636,11 @@ Number  Start   End     Size    File system  Name     Flags
 
 $
 $ sudo blkid &lt;device_usbstick&gt;*
-&lt;device_usbstick&gt;: PTUUID="4bad2c21-de25-46bf-8aac-0e333f535c37" PTTYPE="gpt"
-&lt;device_usbstick&gt;1: SEC_TYPE="msdos" LABEL="multib_esp" UUID="DCBE-BB01" TYPE="vfat" PARTLABEL="primary" PARTUUID="827d8085-3416-4c9d-9221-10a61f4f61b5"
-&lt;device_usbstick&gt;2: LABEL="multib_free" UUID="DEF4-1E1D" TYPE="vfat" PARTLABEL="primary" PARTUUID="f1a16ba3-a923-4a4c-b629-56db5e44caac"
-&lt;device_usbstick&gt;3: LABEL="multib_main" UUID="28345150-0177-4076-89a5-38b7fdff26c4" TYPE="ext4" PARTLABEL="primary" PARTUUID="f7fd4d54-5cf4-4b3a-b6c2-50ec3688e78a"
-&lt;device_usbstick&gt;4: LABEL="multib_data" UUID="a2447eb2-33dd-484b-a4b7-a4dbc6e90cbb" TYPE="ext4" PARTLABEL="primary" PARTUUID="e17259ed-cdf8-47ff-adba-0717d4484786"
+&lt;device_usbstick&gt;: PTUUID="6dc560c0-dd80-4707-847c-76d957928aac" PTTYPE="gpt"
+&lt;device_usbstick&gt;1: SEC_TYPE="msdos" LABEL="multib_esp" UUID="FEAA-AEAE" TYPE="vfat" PARTLABEL="primary" PARTUUID="b1fd8791-9334-48e4-84ea-33af960f9232"
+&lt;device_usbstick&gt;2: LABEL="multib_free" UUID="022A-3547" TYPE="vfat" PARTLABEL="primary" PARTUUID="69bf191d-b6ef-4144-a9f4-5ef25fd701dc"
+&lt;device_usbstick&gt;3: LABEL="multib_main" UUID="bda27c38-16ec-4d2a-b299-04c9416594a2" TYPE="ext4" PARTLABEL="primary" PARTUUID="3bf8b361-034c-49ed-87e2-3fc9da5d1020"
+&lt;device_usbstick&gt;4: LABEL="multib_data" UUID="462776d2-c90c-4e80-9373-595b9f33f671" TYPE="ext4" PARTLABEL="primary" PARTUUID="f5ebe74d-9203-422a-9219-a9d7d8bcb1fc"
 $</code></pre>
 </div></div>
 </li>
@@ -2675,7 +2733,7 @@ $</code></pre>
 <strong>XOR</strong> for <em>UEFI</em>
 </p>
 <div class="listingblock">
-<div class="title">grub – <em>Grub2</em>installation –  <em>x86_64-efi</em> (on <em>GPT</em> partition table)</div>
+<div class="title">grub – <em>Grub2</em> installation –  <em>x86_64-efi</em> (on <em>GPT</em> partition table)</div>
 <div class="content">
 <pre><code>$ sudo mount &lt;device_usbstick&gt;3 &lt;dir_mount_usbstick_main&gt;
 $
@@ -3023,6 +3081,7 @@ $</code></pre>
 </div>
 <div class="sect2">
 <h3 id="_q_amp_a">3.9. Q&amp;A</h3>
+<div class="paragraph"><p>n/a</p></div>
 </div>
 </div>
 </div>
@@ -3089,6 +3148,36 @@ PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
 <li>
 <p>
 <a href="#id_installation_procedure_systemrescuecd">[id_installation_procedure_systemrescuecd]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_tails">[id_installation_procedure_tails]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_gparted">[id_installation_procedure_gparted]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_freedos">[id_installation_procedure_freedos]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_debian">[id_installation_procedure_debian]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_kali">[id_installation_procedure_kali]</a>,
+</p>
+</li>
+<li>
+<p>
+<a href="#id_installation_procedure_clonezilla">[id_installation_procedure_clonezilla]</a>.
 </p>
 </li>
 </ul></div>
@@ -3202,10 +3291,10 @@ Mount the USB stick <em>main</em> partition
 <div class="listingblock">
 <div class="title">mount – mount <em>main</em> partition</div>
 <div class="content">
-<pre><code>$ sudo mount /dev/sdb2 &lt;dir_mount_usbstick_main&gt;
+<pre><code>$ sudo mount &lt;dir_usbstick_partition_main&gt; &lt;dir_mount_usbstick_main&gt;
 $
-$ mount | grep sdb2
-/dev/sdb2 on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
+$ mount | grep &lt;device_usbstick&gt;
+&lt;dir_usbstick_partition_main&gt; on &lt;dir_mount_usbstick_main&gt; type ext4 (rw,relatime,data=ordered)
 $</code></pre>
 </div></div>
 </li>
@@ -3217,10 +3306,17 @@ Copy the <em>SystemRescueCD</em> ISO image onto the USB stick
 <div class="title">rsync – <em>SystemRescueCD</em> copy to <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
 <pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/systemrescuecd* &lt;dir_mount_usbstick_main&gt;/boot/iso
-FIXME
+sending incremental file list
+&gt;f+++++++++ systemrescuecd-x86-4.6.0.iso
+
+sent 467.41M bytes  received 35 bytes  186.96M bytes/sec
+total size is 467.29M  speedup is 1.00
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep systemres
-FIXME
+total 456352
+drwxr-x--x 2 root root      4096 oct.   1 13:16 .
+drwxr-x--x 5 root root      4096 oct.   1 13:04 ..
+-rw-r----- 1 root root 467294208 oct.   1 13:16 systemrescuecd-x86-4.6.0.iso
 $</code></pre>
 </div></div>
 </li>
@@ -3232,7 +3328,7 @@ Validate the checksums
 <div class="title">sha256 – Validate hashes</div>
 <div class="content">
 <pre><code>$ sudo sha256sum &lt;dir_mount_usbstick_main&gt;/boot/iso/systemrescuecd-x86-4.5.3.iso
-16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3  &lt;dir_mount_usbstick_main&gt;/iso/systemrescuecd-x86-4.5.3.iso
+cdf1db091a7d963e3395f4d9b90f40b2b0b939c99ae9138178d5abc6dfa31e0f  &lt;dir_mount_usbstick_main&gt;/iso/systemrescuecd-x86-4.5.3.iso
 $</code></pre>
 </div></div>
 </li>
@@ -3250,16 +3346,46 @@ Copy the <em>Tails</em> ISO image onto the USB stick
 <div class="content">
 <pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/tails-i386-1.4.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso/
 sending incremental file list
-&gt;f+++++++++ tails-i386-1.4.iso
-&gt;f+++++++++ tails-i386-1.4.iso.sig
+&gt;f+++++++++ tails-i386-1.6.iso
+&gt;f+++++++++ tails-i386-1.6.iso.sig
 
-sent 970.82M bytes  received 54 bytes  29.87M bytes/sec
-total size is 970.58M  speedup is 1.00
+sent 987.28M bytes  received 54 bytes  282.08M bytes/sec
+total size is 987.03M  speedup is 1.00
+
 $
 $ ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep tail
-total 2,1G
--rwxr-x--x 1 lerouge lerouge 926M juil. 13 17:45 tails-i386-1.4.iso*
--rwxr-x--x 1 lerouge lerouge  801 juil. 13 17:45 tails-i386-1.4.iso.sig
+-rw-r----- 1 root root 987033600 oct.   1 13:26 tails-i386-1.6.iso
+-rw-r----- 1 root root       801 oct.   1 13:26 tails-i386-1.6.iso.sig
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate the signature
+</p>
+<div class="listingblock">
+<div class="title">gpg2 – Validate the signature</div>
+<div class="content">
+<pre><code>$ sudo gpg2 --verify &lt;dir_mount_usbstick_main&gt;/boot/iso/tails-i386-1.6.iso.sig &lt;dir_mount_usbstick_main&gt;/boot/iso/tails-i386-1.6.iso
+gpg: using character set 'utf-8'
+gpg: armor: BEGIN PGP SIGNATURE
+# off=0 ctb=89 tag=2 hlen=3 plen=540
+:signature packet: algo 1, keyid 98FEC6BC752A3DB6
+   version 4, created 1442783639, md5len 0, sigclass 0x00
+   digest algo 10, begin of digest e7 2e
+   hashed subpkt 2 len 4 (sig created 2015-09-20)
+   subpkt 16 len 8 (issuer key ID 98FEC6BC752A3DB6)
+   data: [4095 bits]
+gpg: Signature made dim. 20 sept. 2015 17:13:59 EDT
+gpg:                using RSA key 0x98FEC6BC752A3DB6
+gpg: using subkey 0x98FEC6BC752A3DB6 instead of primary key 0xDBB802B258ACD84F
+gpg: key 0x3A23684DF38E9037: accepted as trusted key
+gpg: Good signature from "Tails developers (offline long-term identity key) &lt;tails@boum.org&gt;" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: A490 D0F4 D311 A415 3E2B  B7CA DBB8 02B2 58AC D84F
+     Subkey fingerprint: BA2C 222F 44AC 00ED 9899  3893 98FE C6BC 752A 3DB6
+gpg: binary signature, digest algorithm SHA512, key algorithm rsa4096
 $</code></pre>
 </div></div>
 </li>
@@ -3276,10 +3402,14 @@ Copy the <em>GParted</em> ISO image onto the USB stick
 <div class="title">rsync – <em>GParted</em> copy to <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
 <pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/gparted-live* &lt;dir_mount_usbstick_main&gt;/boot/iso
-FIXME
+ending incremental file list
+&gt;f+++++++++ gparted-live-0.23.0-1-i586.iso
+
+sent 255.92M bytes  received 35 bytes  170.61M bytes/sec
+total size is 255.85M  speedup is 1.00
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep gparted
-FIXME
+-rw-r----- 1 root root 255852544 oct.   1 13:32 gparted-live-0.23.0-1-i586.iso
 $</code></pre>
 </div></div>
 </li>
@@ -3290,22 +3420,8 @@ Validate checksums
 <div class="listingblock">
 <div class="title">sha256 – Validate hashes</div>
 <div class="content">
-<pre><code>$ cd &lt;dir_mount_usbstick_main&gt;/boot/iso
-$
-$ sudo sha256sum -c gparted-live.checksum
-sha256sum: gparted-live-0.22.0-2-amd64.iso: No such file or directory
-gparted-live-0.22.0-2-amd64.iso: FAILED open or read
-gparted-live-0.22.0-2-i586.iso: OK
-sha256sum: gparted-live-0.22.0-2-i686-pae.iso: No such file or directory
-gparted-live-0.22.0-2-i686-pae.iso: FAILED open or read
-sha256sum: gparted-live-0.22.0-2-amd64.zip: No such file or directory
-gparted-live-0.22.0-2-amd64.zip: FAILED open or read
-sha256sum: gparted-live-0.22.0-2-i586.zip: No such file or directory
-gparted-live-0.22.0-2-i586.zip: FAILED open or read
-sha256sum: gparted-live-0.22.0-2-i686-pae.zip: No such file or directory
-gparted-live-0.22.0-2-i686-pae.zip: FAILED open or read
-sha256sum: WARNING: 14 lines are improperly formatted
-sha256sum: WARNING: 5 listed files could not be read
+<pre><code>$ sudo sha256sum dir_mount_usbstick_main&gt;/boot/iso/gparted-live-0.23.0-1-i586.iso
+544abda1924a03917a8a21d9fd12dffa3a8b2b8af29ae83555b0892bec712e7c  /media/blanche/boot/iso/gparted-live-0.23.0-1-i586.iso
 $</code></pre>
 </div></div>
 </li>
@@ -3313,7 +3429,7 @@ $</code></pre>
 </div>
 <div class="sect2">
 <h3 id="id_installation_procedure_freedos">4.7. Procedure – <em>FreeDOS</em> installation</h3>
-<div class="olist arabic compact"><div class="title">Roadmap</div><ol class="arabic">
+<div class="olist arabic compact"><div class="title">Synthesis</div><ol class="arabic">
 <li>
 <p>
 generate a <em>FreeDOS</em> image,
@@ -3333,7 +3449,7 @@ copy <em>memdisk</em> onto the USB stick.
 <div class="olist arabic compact"><div class="title">Detail</div><ol class="arabic">
 <li>
 <p>
-Generate a <em>FreeDOS</em>image
+Generate a <em>FreeDOS</em> image
 </p>
 <div class="ulist compact"><ul>
 <li>
@@ -3355,9 +3471,12 @@ Copy the generated <em>FreeDOS</em> image onto the USB stick
 <div class="listingblock">
 <div class="title">rsync – Copy the <em>FreeDOS</em> image onto <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/tails-i386-1.4.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso/
+<pre><code>$ rsync -vrihl ~/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-iris.img &lt;dir_mount_usbstick_main&gt;/boot/iso/
 sending incremental file list
-FIXME
+cL+++++++++ freetown-boot-freedos-iris.img -&gt; /home/lerouge/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-iris.img
+
+sent 160 bytes  received 19 bytes  358.00 bytes/sec
+total size is 85  speedup is 0.47
 $</code></pre>
 </div></div>
 </li>
@@ -3368,7 +3487,7 @@ Copy <em>memdisk</em> onto the USB stick
 <div class="listingblock">
 <div class="title">Shell – Copy <em>memdisk</em> onto <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ sudo cp /usr/lib/syslinux/memdisk &lt;dir_mount_usbstick_main&gt;/boot
+<pre><code>$ rsync /usr/lib/syslinux/memdisk &lt;dir_mount_usbstick_main&gt;/boot
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot
 total 44
@@ -3377,13 +3496,22 @@ drwxr-xr-x 4 root root  4096 juil. 14 20:51 ..
 drwxr-x--x 5 root root  4096 juil. 14 20:51 grub
 drwxr-x--x 2 root root  4096 juil. 14 21:08 iso
 -rw-r----- 1 root root 25372 juil. 14 21:09 memdisk
+
+total 48
+drwxr-x--x 5 root root  4096 oct.   1 13:41 .
+drwxr-xr-x 4 root root  4096 oct.   1 12:39 ..
+drwxr-x--x 2 root root  4096 oct.   1 12:39 efi
+drwx------ 5 root root  4096 oct.   1 12:50 grub
+drwxr-x--x 2 root root  4096 oct.   1 13:40 iso
+-rw-r----- 1 root root 25372 oct.   1 13:41 memdisk
 $</code></pre>
 </div></div>
 </li>
 </ol></div>
-<div class="paragraph"><p>FIXME- not totally sure one needs the deb:<em>syslinux-common</em>  as there is a Grub2 module <em>memdisk</em> -FIXME</p></div>
-<div class="sect3">
-<h4 id="id_installation_procedure_debian">4.7.1. Procedure – <em>Debian</em> installation</h4>
+<div class="paragraph"><p>FIXME- not totally sure one needs the deb:<em>syslinux-common</em>  as there is a <em>Grub2</em> module <em>memdisk</em> -FIXME</p></div>
+</div>
+<div class="sect2">
+<h3 id="id_installation_procedure_debian">4.8. Procedure – <em>Debian</em> installation</h3>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -3444,27 +3572,20 @@ Copy the <em>Debian</em> <em>NetInstaller</em> ISO image onto the USB stick
 <div class="listingblock">
 <div class="title">rsync – copy <em>debian installer</em> image to <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian-8.1.0-amd64-i386-netinst.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso
+<pre><code>$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian/debian-8.2.0-amd64-i386-netinst.iso** &lt;dir_mount_usbstick_main&gt;/boot/iso
 sending incremental file list
-&gt;f+++++++++ debian-8.1.0-amd64-i386-netinst.iso
+&gt;f+++++++++ debian-8.2.0-amd64-i386-netinst.iso
+&gt;f+++++++++ debian-8.2.0-amd64-i386-netinst.iso-SHA256SUMS
+&gt;f+++++++++ debian-8.2.0-amd64-i386-netinst.iso-SHA256SUMS.sign
 
-sent 582.10M bytes  received 35 bytes  68.48M bytes/sec
+sent 582.10M bytes  received 73 bytes  232.84M bytes/sec
 total size is 581.96M  speedup is 1.00
 $
-$ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian/SHA* &lt;dir_mount_usbstick_main&gt;/boot/iso
-sending incremental file list
-&gt;f+++++++++ SHA1SUMS
-&gt;f+++++++++ SHA1SUMS.sign
-&gt;f+++++++++ SHA256SUMS
-&gt;f+++++++++ SHA256SUMS.sign
-&gt;f+++++++++ SHA512SUMS
-&gt;f+++++++++ SHA512SUMS.sign
-
-sent 3.21K bytes  received 130 bytes  6.69K bytes/sec
-total size is 2.80K  speedup is 0.84
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep debian
-FIXME
+-rw-r----- 1 root root 581959680 oct.   1 14:09 debian-8.2.0-amd64-i386-netinst.iso
+-rw-r----- 1 root root       102 oct.   1 14:09 debian-8.2.0-amd64-i386-netinst.iso-SHA256SUMS
+-rw-r----- 1 root root       819 oct.   1 14:09 debian-8.2.0-amd64-i386-netinst.iso-SHA256SUMS.sign
 $</code></pre>
 </div></div>
 </li>
@@ -3477,8 +3598,8 @@ Validate checksums
 <div class="content">
 <pre><code>$ cd &lt;dir_mount_usbstick_main&gt;/boot/iso
 $
-$ sudo sha256sum -c gparted-live.checksum
-FIXME
+$ sudo sha256sum -c /media/blanche/boot/iso/debian-8.2.0-amd64-i386-netinst.iso-SHA256SUMS
+debian-8.2.0-amd64-i386-netinst.iso: OK
 $</code></pre>
 </div></div>
 </li>
@@ -3502,31 +3623,78 @@ Copy <em>initrd</em> from <em>hd-media</em> type installer onto the USB stick
 <div class="listingblock">
 <div class="title">rsync – copy <em>initrd.gz</em>s to <code>&lt;device_usbstick&gt;</code><em>/boot/debian</em></div>
 <div class="content">
-<pre><code>$ sudo mkdir &lt;dir_mount_usbstick_main&gt;/boot/debian
+<pre><code>$ sudo mkdir -v &lt;dir_mount_usbstick_main&gt;/boot/debian
+mkdir: created directory ‘&lt;dir_mount_usbstick_main&gt;/boot/debian’
 $
 $ sudo rsync -vrihl &lt;dir_download&gt;/iso/debian/install.* &lt;dir_mount_usbstick_main&gt;/boot/debian
 sending incremental file list
-cd+++++++++ install.386/
-&gt;f+++++++++ install.386/initrd.gz
-cd+++++++++ install.386/gtk/
-&gt;f+++++++++ install.386/gtk/initrd.gz
-cd+++++++++ install.amd/
-&gt;f+++++++++ install.amd/initrd.gz
-cd+++++++++ install.amd/gtk/
-&gt;f+++++++++ install.amd/gtk/initrd.gz
+cd+++++++++ install.amd64/
+&gt;f+++++++++ install.amd64/initrd.gz
+cd+++++++++ install.amd64/gtk/
+&gt;f+++++++++ install.amd64/gtk/initrd.gz
+cd+++++++++ install.i386/
+&gt;f+++++++++ install.i386/initrd.gz
+cd+++++++++ install.i386/gtk/
+&gt;f+++++++++ install.i386/gtk/initrd.gz
 
-sent 72.52M bytes  received 120 bytes  48.34M bytes/sec
-total size is 72.50M  speedup is 1.00
+sent 72.51M bytes  received 120 bytes  145.02M bytes/sec
+total size is 72.49M  speedup is 1.00
 $
-$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/debian</code></pre>
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/debian
+total 16
+drwxr-x--x 4 root root 4096 oct.   1 14:16 .
+drwxr-x--x 6 root root 4096 oct.   1 14:15 ..
+drwxr-x--x 3 root root 4096 oct.   1 14:16 install.amd64
+drwxr-x--x 3 root root 4096 oct.   1 14:16 install.i386
+$
+$ mv &lt;dir_mount_usbstick_main&gt;/boot/debian/install.amd64 &lt;dir_mount_usbstick_main&gt;/boot/debian/install.amd
+$ mv &lt;dir_mount_usbstick_main&gt;/boot/debian/install.i386 &lt;dir_mount_usbstick_main&gt;/boot/debian/install.386
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/debian
+total 16
+drwxr-x--x 4 root root 4096 oct.   1 14:16 .
+drwxr-x--x 6 root root 4096 oct.   1 14:15 ..
+drwxr-x--x 3 root root 4096 oct.   1 14:16 install.amd
+drwxr-x--x 3 root root 4096 oct.   1 14:16 install.386
+$</code></pre>
 </div></div>
 </li>
 </ol></div>
 </div>
-<div class="sect3">
-<h4 id="id_installation_porocedure_kali">4.7.2. Procedure – <em>Kali</em> installation</h4>
-<div class="paragraph"><p>FIXME</p></div>
+<div class="sect2">
+<h3 id="id_installation_procedure_kali">4.9. Procedure – <em>Kali</em> installation</h3>
 <div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>Kali</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – Copy <em>Kali</em>  image onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/kali-linux-2.0-amd64.iso* &lt;dir_mount_usbstick_main&gt;/boot/iso/
+sending incremental file list
+&gt;f+++++++++ kali-linux-2.0-amd64.iso
+&gt;f+++++++++ kali-linux-2.0-amd64.iso-checksum
+
+sent 3.32G bytes  received 54 bytes  25.65M bytes/sec
+total size is 3.32G  speedup is 1.00
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep kali
+-rw-r----- 1 root root 3320512512 oct.   1 15:32 kali-linux-2.0-amd64.iso
+-rw-r----- 1 root root         40 oct.   1 15:32 kali-linux-2.0-amd64.iso-checksum
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate checksum
+</p>
+<div class="listingblock">
+<div class="title">sha256sum – Validate hash</div>
+<div class="content">
+<pre><code>FIXME</code></pre>
+</div></div>
+</li>
 <li>
 <p>
 Un-mount the USB stick <em>main</em> partition
@@ -3542,13 +3710,83 @@ $</code></pre>
 </li>
 </ol></div>
 </div>
+<div class="sect2">
+<h3 id="id_installation_procedure_grml">4.10. Procedure – <em>GRML</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>GRML</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – Copy <em>GRML</em>  image onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/grml96-full_2014.11.iso &lt;dir_mount_usbstick_main&gt;/boot/iso/
+sending incremental file list
+&gt;f+++++++++ grml96-full_2014.11.iso
+
+sent 957.58M bytes  received 35 bytes  273.60M bytes/sec
+total size is 957.35M  speedup is 1.00
+$
+$ ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep grml
+-rw-r----- 1 root root 957349888 oct.   1 14:25 grml96-full_2014.11.iso
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate checksum
+</p>
+<div class="listingblock">
+<div class="title">sha256sum – Validate hash</div>
+<div class="content">
+<pre><code>FIXME</code></pre>
+</div></div>
+</li>
+</ol></div>
 </div>
 <div class="sect2">
-<h3 id="_clean_2">4.8. Clean</h3>
+<h3 id="id_installation_procedure_clonezilla">4.11. Procedure – <em>CloneZilla</em> installation</h3>
+<div class="olist arabic compact"><ol class="arabic">
+<li>
+<p>
+Copy the <em>CloneZilla</em> ISO image onto the USB stick
+</p>
+<div class="listingblock">
+<div class="title">rsync – Copy <em>GRML</em>  image onto <code>&lt;device_usbstick&gt;</code></div>
+<div class="content">
+<pre><code>$ rsync -vrihl &lt;dir_download&gt;/iso/clonezilla-live-2.4.2-56-* &lt;dir_mount_usbstick_main&gt;/boot/iso/
+sending incremental file list
+&gt;f+++++++++ grml96-full_2014.11.iso
+&gt;f+++++++++ clonezilla-live-2.4.2-56-amd64.iso
+&gt;f+++++++++ clonezilla-live-2.4.2-56-checksums
+
+sent 186.69M bytes  received 54 bytes  124.46M bytes/sec
+total size is 186.65M  speedup is 1.00
+$
+$ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/iso | grep clone
+-rw-r----- 1 root root 186646528 oct.   1 15:23 clonezilla-live-2.4.2-56-amd64.iso
+-rw-r----- 1 root root      1541 oct.   1 15:23 clonezilla-live-2.4.2-56-checksums
+$</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+Validate checksum
+</p>
+<div class="listingblock">
+<div class="title">sha256sum – Validate hash</div>
+<div class="content">
+<pre><code>FIXME</code></pre>
+</div></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_clean_2">4.12. Clean</h3>
 <div class="paragraph"><p>n/a</p></div>
 </div>
 <div class="sect2">
-<h3 id="_q_amp_a_2">4.9. Q&amp;A</h3>
+<h3 id="_q_amp_a_2">4.13. Q&amp;A</h3>
 <div class="paragraph"><p>n/a</p></div>
 </div>
 </div>
@@ -3558,7 +3796,7 @@ $</code></pre>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_goal_3">5.1. Goal</h3>
-<div class="paragraph"><p>The goal of this step is to add a booting <em>FreeDOS</em> partition so that one can drop required payload into it (easier than editing the image).</p></div>
+<div class="paragraph"><p>The goal of this step is to add a native, booting <em>FreeDOS</em> partition so that one can drop required payload into it (easier than editing the image).</p></div>
 </div>
 <div class="sect2">
 <h3 id="_pre_requisites_3">5.2. Pre-requisites</h3>
@@ -3570,7 +3808,7 @@ the USB stick ready (see <a href="#id_usbstick_preparation">[id_usbstick_prepara
 </li>
 <li>
 <p>
-the staging part of the <em>FreeDOS</em> image generation (as explained in the document <em>Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with </em>FreeDOS<em>)</em>.
+the staging part of the <em>FreeDOS</em> image generation (as explained in the document <em>Timetombs – Tip – Unix – System administration – USB key boot for firmware upgrade (with </em>FreeDOS<em>)</em>).
 </p>
 </li>
 </ol></div>
@@ -3585,10 +3823,10 @@ Mount the USB stick <em>freedos</em> partition
 <div class="listingblock">
 <div class="title">mount – mount <em>freedos</em> partition</div>
 <div class="content">
-<pre><code>$ sudo mount /dev/sdb1 &lt;dir_mount_usbstick_main&gt;
+<pre><code>$ sudo mount &lt;dir_usbstick_partition_freedos&gt; &lt;dir_mount_usbstick_freedos&gt;
 $
-$ mount | grep sdb1
-/dev/sdb1 on &lt;dir_mount_usbstick_main&gt; type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
+$ mount | grep &lt;dir_usbstick_partition_freedos&gt;
+&lt;dir_usbstick_partition_freedos&gt; on &lt;dir_mount_usbstick_main&gt; type vfat (rw,relatime,fmask=0026,dmask=0026,codepage=437,iocharset=utf8,shortname=mixed,errors=remount-ro)
 $</code></pre>
 </div></div>
 </li>
@@ -3599,7 +3837,7 @@ Copy the content of <em>FreeDOS</em> from the staging area over to the USB stic
 <div class="listingblock">
 <div class="title">rsync – copy from the directory <code>&lt;dir_freedos_staging&gt;</code> onto <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ rsync -vrihL ~/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/ &lt;dir_mount_usbstick_main&gt;
+<pre><code>$ rsync -vrihL ~/data/freetown/freetown-boot-freedos-iris/freetown-boot-freedos-component/ &lt;dir_mount_usbstick_freedos&gt;
 sending incremental file list
 &gt;f+++++++++ BACKUP-autoexec.bat-origin
 &gt;f+++++++++ BACKUP-config.sys-origin
@@ -3630,8 +3868,8 @@ cd+++++++++ syslinux/
 sent 140.60M bytes  received 15.67K bytes  93.74M bytes/sec
 total size is 140.51M  speedup is 1.00
 $
-$ tree &lt;dir_mount_usbstick_main&gt;
-&lt;dir_mount_usbstick_main&gt;
+$ tree &lt;dir_mount_usbstick_freedos&gt;
+&lt;dir_mount_usbstick_freedos&gt;
 ├── autoexec.bat
 ├── BACKUP-autoexec.bat-origin
 ├── BACKUP-config.sys-origin
@@ -3689,8 +3927,8 @@ $ tree &lt;dir_mount_usbstick_main&gt;
 │   └── sas-raid
 ├── syslinux
 │   ├── cat.c32
-│   └── zzjson.c32
 […]
+│   └── zzjson.c32
 └── syslinux.cfg
 
 120 directories, 789 files
@@ -3704,7 +3942,7 @@ Install <em>syslinux</em>
 <div class="listingblock">
 <div class="title">syslinux – installation</div>
 <div class="content">
-<pre><code>$ sudo syslinux --directory syslinux --install /dev/sdb1
+<pre><code>$ sudo syslinux --directory syslinux --install &lt;dir_usbstick_partition_freedos&gt;
 $</code></pre>
 </div></div>
 </li>
@@ -3715,9 +3953,9 @@ Un-mount the USB stick
 <div class="listingblock">
 <div class="title">mount – umount <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ umount &lt;dir_mount_usbstick_main&gt;
+<pre><code>$ umount &lt;dir_mount_usbstick_freedos&gt;
 $
-$ mount | grep sdb
+$ mount | grep &lt;device_usbstick&gt;
 $</code></pre>
 </div></div>
 </li>
@@ -3747,12 +3985,12 @@ the <em>Grub2</em> configuration tailored to our needs
 <div class="ulist compact"><ul>
 <li>
 <p>
-<em>grub-bios.cfg</em>,
+for <em>BIOS</em> machines: <em>grub-bios.cfg</em>,
 </p>
 </li>
 <li>
 <p>
-<em>grub-uefi.cfg</em>.
+for <em>(U)EFI</em> machines: <em>grub-uefi.cfg</em>.
 </p>
 </li>
 </ul></div>
@@ -3764,7 +4002,7 @@ the <em>Grub2</em> configuration tailored to our needs
 <div class="ulist compact"><ul>
 <li>
 <p>
-The file <em>grub.cfg</em> is on the USB stick in the <em>/boot/grub/</em> directory.
+The file <em>grub.cfg</em> on the USB stick in the <em>/boot/grub/</em> directory.
 </p>
 </li>
 </ul></div>
@@ -3854,7 +4092,7 @@ for the <em>BIOS</em> version
 <div class="listingblock">
 <div class="title">cp – copy <em>grub.cfg</em> into <em>&lt;dir_mount_usbstick_main&gt;/boot/grub/</em> on <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ sudo cp ~/data/timetombs/usbboot/grub-bios.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
+<pre><code>$ rsync -vrihl ~/data/timetombs/usbboot/grub-bios.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
 FIXME
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/grub
@@ -3876,18 +4114,22 @@ for the <em>UEFI</em> version
 <div class="listingblock">
 <div class="title">cp – copy <em>grub-uefi.cfg</em> into <em>&lt;dir_mount_usbstick_main&gt;/boot/grub/</em> on <code>&lt;device_usbstick&gt;</code></div>
 <div class="content">
-<pre><code>$ sudo cp ~/data/timetombs/usbboot/grub-uefi.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
-FIXME
+<pre><code>$ rsync -vrihl ~/data/timetombs/usbboot/grub-uefi.cfg &lt;dir_mount_usbstick_main&gt;/boot/grub/grub.cfg
+sending incremental file list
+&gt;f.sT...... grub-uefi.cfg
+
+sent 15.08K bytes  received 35 bytes  30.22K bytes/sec
+total size is 14.98K  speedup is 0.99
 $
 $ sudo ls -al &lt;dir_mount_usbstick_main&gt;/boot/grub
 total 48
-drwx------ 5 root root  4096 juil. 16 16:17 .
-drwx------ 5 root root  4096 juil. 16 17:00 ..
-drwx------ 2 root root  4096 juil. 16 15:56 fonts
--rw-r----- 1 root root 14219 juil. 16 16:56 grub.cfg
--rw------- 1 root root  1024 juil. 16 15:56 grubenv
-drwx------ 2 root root  4096 juil. 16 15:56 locale
-drwx------ 2 root root 12288 juil. 16 15:56 x86_64-efi
+drwx------ 5 root root  4096 oct.   1 14:47 .
+drwxr-x--x 6 root root  4096 oct.   1 14:15 ..
+drwx------ 2 root root  4096 oct.   1 12:50 fonts
+-rw-r----- 1 root root 14166 oct.   1 14:47 grub.cfg
+-rw------- 1 root root  1024 oct.   1 12:50 grubenv
+drwx------ 2 root root  4096 oct.   1 12:50 locale
+drwx------ 2 root root 12288 oct.   1 12:50 x86_64-efi
 $</code></pre>
 </div></div>
 </li>
@@ -3902,21 +4144,11 @@ un-mount the USB stick
 <div class="content">
 <pre><code>$ sudo umount &lt;dir_mount_usbstick_main&gt;
 $
-$ mount | grep &lt;dir_mount_usbstick_main&gt;
+$ mount | grep &lt;device_usbstick&gt;
 $</code></pre>
 </div></div>
 </li>
 </ol></div>
-<div class="paragraph"><p> USAGE$
- Two main ways to set the filesystem encapsulated in an ISO one wants to boot$
- 1- set it manually$
-    loopback &lt;var&gt; (hdX,&lt;partition_table_type&gt;X)/path/to/iso$
-    then use (&lt;var&gt;) in linux or initrd call$
- 2- let Grub2 figure it out by looking for UUID$
-    search --no-floppy --fs-uuid --set=&lt;var&gt; &lt;uuid&gt;$
-    then use &lt;var&gt; in the loopback command$
-    if there is no &lt;var&gt; defined after --set option,⋅$
-     then the var <em>root</em> is implicitly used$</p></div>
 </div>
 </div>
 </div>
@@ -3925,7 +4157,7 @@ $</code></pre>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_goal_5">7.1. Goal</h3>
-<div class="paragraph"><p>The goal in this part is to setup the third partition to store (persistent) data of the user when he is using of the live systems.</p></div>
+<div class="paragraph"><p>The goal in this part is to setup the third partition to store (persistent) data of the user when he is using one of the live systems.</p></div>
 <div class="paragraph"><p>This partition must be encrypted.</p></div>
 </div>
 <div class="sect2">
@@ -3961,14 +4193,297 @@ with an <em>ext4</em> filesystem.
 </div>
 </div>
 <div class="sect1">
-<h2 id="_annexes">8. Annexes</h2>
+<h2 id="_what_8217_s_working_or_not">8. What&#8217;s working (or not)</h2>
+<div class="sectionbody">
+<div class="ulist compact"><div class="title">Machines used to test</div><ul>
+<li>
+<p>
+M: x220, (U)EFI but setup as legacy (BIOS)
+</p>
+</li>
+<li>
+<p>
+L: Asus P8H67-M, [U]EFI
+</p>
+</li>
+<li>
+<p>
+N: Asus EeePC 901, BIOS
+</p>
+</li>
+<li>
+<p>
+Z: Acer 7720Z, BIOS
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_2015_10_02">8.1. 2015-10-02</h3>
+<div class="tableblock">
+<table rules="all"
+width="65%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 1. (U)EFI version</caption>
+<col width="33%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<thead>
+<tr>
+<th align="left" valign="top">OS \ Machine        </th>
+<th align="left" valign="top">M </th>
+<th align="left" valign="top">L </th>
+<th align="left" valign="top">N </th>
+<th align="left" valign="top">Z</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><em>FreeDOS</em> (native)</p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>FreeDOS</em></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Tails</em></p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Kali</em></p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>SystemRescueCD</em></p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Debian Installer</em></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>GRML</em></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>GParted</em></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">OK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>CloneZilla</em></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table">NOK</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="ulist compact"><div class="title">OK</div><ul>
+<li>
+<p>
+<em>SystemRescueCD</em>: default, including X
+</p>
+</li>
+<li>
+<p>
+<em>Kali</em>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>Kali v.2.0 - amd64</em>: OK&#8201;&#8212;&#8201;<em>error: no suitable video mode found. \n Booting in blind mode</em> &#8594; (long) desktop
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="ulist compact"><div class="title">NOK</div><ul>
+<li>
+<p>
+<em>Debian Installer</em>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+&#8594; <em>error: no suitable video mode found \n Booting in blind mode</em> &#8594; short blueish vertical lines at the top of the screen
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>Clonezilla</em>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+<em>CloneZilla v.2.4.2-56 - amd664</em>: <em>error: no suitable video mode found. \n Booting in blind mode</em> &#8594; frozen
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>FreeDOS</em> (native)
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+chainloaded &#8594; <em>error: invalid EFI file path. \n error: unkown argument <em>boot+</em>. \n error: you need to load the kernel first.</em>
+</p>
+</li>
+<li>
+<p>
+kernel.sys &#8594; <em>error: can&#8217;t find command <em>freedos</em>.</em>
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+<em>FreeDOS</em>
+</p>
+<div class="ulist compact"><ul>
+<li>
+<p>
+(via MEMDISK and img) &#8594; black screen
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+all are booting with <em>error: no suitable video mode found \n Booting in blind mode</em>. That&#8217;s taking quite a bit of time.
+</p>
+</li>
+</ul></div>
+<div class="tableblock">
+<table rules="all"
+width="65%"
+frame="hsides"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 2. BIOS version</caption>
+<col width="33%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<col width="16%" />
+<thead>
+<tr>
+<th align="left" valign="top">OS \ Machine        </th>
+<th align="left" valign="top">M </th>
+<th align="left" valign="top">L </th>
+<th align="left" valign="top">N </th>
+<th align="left" valign="top">Z</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table"><em>FreeDOS</em> (native)</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>FreeDOS</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Tails</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Kali</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>SystemRescueCD</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>Debian Installer</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>GRML</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>GParted</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table"><em>CloneZilla</em></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_annexes">9. Annexes</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_hashes">8.1. Hashes</h3>
+<h3 id="_hashes">9.1. Hashes</h3>
 <div class="sect3">
-<h4 id="_debian">8.1.1. Debian</h4>
+<h4 id="_debian">9.1.1. Debian</h4>
 <div class="listingblock">
-<div class="title">8.1 - amd64-i386</div>
+<div class="title">8.1 – amd64-i386</div>
 <div class="content">
 <pre><code>6a2c1654ba12f4839da47c8864233870898858ce  debian-8.1.0-amd64-i386-netinst.iso
 
@@ -3976,9 +4491,16 @@ d8aee537610ca2e87469e61709cd8fca1f7122b999430dfae4bd793ab767bfac  debian-8.1.0-a
 
 0437b63c2b01dcee4b1df8f9bd27a1b28f95c000bb92104463fbed714ff39906e7f36098178864496b83abcf5f4491ef62a1f00fcdb47f700a086ba25ccd5371  debian-8.1.0-amd64-i386-netinst.iso</code></pre>
 </div></div>
+<div class="listingblock">
+<div class="title">8.2 – amd64-i386</div>
+<div class="content">
+<pre><code>d453bec61f0ff49aa314b6e1d03cee4f  debian/debian-8.2.0-amd64-i386-netinst.iso
+2e867149de4af4098608d2ef25d6fc44304cfca8618371dd592bfe3d03a1b62d  debian/debian-8.2.0-amd64-i386-netinst.iso
+1e8dbe55cbdff82b262ff90a7e1cb8e0527f79f4c4f654e031aa5581456101b81f302b6dc700d27d947fd2f492dce695ba60200d6ed3d36d6e2f56308c361e33  debian/debian-8.2.0-amd64-i386-netinst.iso</code></pre>
+</div></div>
 </div>
 <div class="sect3">
-<h4 id="_gparted">8.1.2. GParted</h4>
+<h4 id="_gparted">9.1.2. GParted</h4>
 <div class="listingblock">
 <div class="title">v.0.22.0-2</div>
 <div class="content">
@@ -3989,17 +4511,31 @@ d083c5d4ea6d690c4a3e22832dd54ca94167a546dd922c67e41a1717723b0afa gparted-live-0.
 6415d65f2a337dc9e93a5fa64ad5dd414ea7ea8fd1957ee48f7354466552dcec gparted-live-0.22.0-2-i586.zip
 8c96b3af45be753197a83d615a5bef2a1bdc6249b7d9a1e77cf00e5f245d59a3 gparted-live-0.22.0-2-i686-pae.zip</code></pre>
 </div></div>
+<div class="listingblock">
+<div class="title">v.0.23.0-1</div>
+<div class="content">
+<pre><code>2d15d8ad51618ce7f67ed41f57b7d91d  gparted-live-0.23.0-1-i586.iso
+544abda1924a03917a8a21d9fd12dffa3a8b2b8af29ae83555b0892bec712e7c  gparted-live-0.23.0-1-i586.iso
+929dbd3ba3085e2a626ed03ee64f0234e6861b87d06d6df3a3e2ad8c0dd16d7029a9f9f4a1217c6f28e76db02f042e2d35afbcb74f954b676effb516db17b075  gparted-live-0.23.0-1-i586.iso</code></pre>
+</div></div>
 </div>
 <div class="sect3">
-<h4 id="_systemrescuecd">8.1.3. SystemRescueCD</h4>
+<h4 id="_systemrescuecd">9.1.3. SystemRescueCD</h4>
 <div class="listingblock">
 <div class="title">v.4.5.3</div>
 <div class="content">
 <pre><code>16aadc8bef95a0f409a7865054e8597b1001d815b22d976556c103379ea6aba3 systemrescuecd-x86-4.5.3.iso</code></pre>
 </div></div>
+<div class="listingblock">
+<div class="title">v.4.6.0</div>
+<div class="content">
+<pre><code>31c16842bd8743e8d22bac911017ca60  systemrescuecd-x86-4.6.0.iso
+cdf1db091a7d963e3395f4d9b90f40b2b0b939c99ae9138178d5abc6dfa31e0f  systemrescuecd-x86-4.6.0.iso
+f90d46adb8ab19b19eae589744808bcbd50aa0b0eac22eca92a09e8407c77e7a2bf573c2c72b37f497a9d287c90b20164b213bf007b538063f758b12b1da11eb  systemrescuecd-x86-4.6.0.iso</code></pre>
+</div></div>
 </div>
 <div class="sect3">
-<h4 id="_grml">8.1.4. GRML</h4>
+<h4 id="_grml">9.1.4. GRML</h4>
 <div class="listingblock">
 <div class="title">v.2014.11</div>
 <div class="content">
@@ -4027,7 +4563,7 @@ jqlNGAX5oJ3wlMjmXOyylTYgiDHaMSCyFYPC0vpMLtAgsP6d9PwiM/+6/vvDgLkA
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_clonezilla">8.1.5. Clonezilla</h4>
+<h4 id="_clonezilla">9.1.5. Clonezilla</h4>
 <div class="listingblock">
 <div class="title">v.2.4.2-10</div>
 <div class="content">
@@ -4040,12 +4576,39 @@ e4b20b238972368143a56f2a5aec1916d65f1e93  clonezilla-live-2.4.2-10-i586.iso
 671229ed966beca8a59e811e60a37b2088ff9b0e6ee7a0ebb2c0b43fd04d08d8  clonezilla-live-2.4.2-10-amd64.iso
 a320b072593af6b390f213ee326c3aa6aad8ac088e265e8ae1a1301109433687  clonezilla-live-2.4.2-10-i586.iso</code></pre>
 </div></div>
+<div class="listingblock">
+<div class="title">v.2.4.2-56</div>
+<div class="content">
+<pre><code>e9018ac32b8f8b8cadaecc39384ccf0d  clonezilla-live-2.4.2-56-amd64.iso
+7c51536ea9d18d77aa0490497a862634631445329da9e80d00f3881081a08ee6  clonezilla-live-2.4.2-56-amd64.iso
+53cc6972735f3bcfb5c71afd34e95d041d342b2eefb619c4bb267d498b19a1a6a6a6548a6b26926c74984038b4f54298fcda7f8915cd2f1e2f4affc825e37552  clonezilla-live-2.4.2-56-amd64</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_kali">9.1.6. Kali</h4>
+<div class="listingblock">
+<div class="title">v.2.0</div>
+<div class="content">
+<pre><code>ef192433017c5d99a156eaef51fd389d  kali-linux-2.0-amd64.iso
+f63e7cc247729cd6a724ccdb9f2b15b3edd1382182ad35fa4893562616ca442c  kali-linux-2.0-amd64.iso
+57c61f281d4d0fc43b155b792c0aa8c0f4ce0b291f322a7d809df76ce4df9597215c6bb3793501fa1e68747bfaae43b412273835d975fbccbe723d730603b18c  kali-linux-2.0-amd64.iso</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_tails">9.1.7. Tails</h4>
+<div class="listingblock">
+<div class="title">v.1.6</div>
+<div class="content">
+<pre><code>2d6dfff9ad31771712415b2766a06d35  tails-i386-1.6.iso
+6daba429ec9372af0822d8dd4c3e96407240a31c9373173a5985d8d669ea1d00  tails-i386-1.6.iso
+de7e886630137bfe3a659e5ea75059f4f45c08742ca06a1407675d15dee958c7af206e66e537a0341318ba488cffc19fd90289046a2415d9b0633c7c504c9fe8  tails-i386-1.6.iso</code></pre>
+</div></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_bug_reports">8.2. Bug reports</h3>
+<h3 id="_bug_reports">9.2. Bug reports</h3>
 <div class="sect3">
-<h4 id="_parted">8.2.1. parted</h4>
+<h4 id="_parted">9.2.1. parted</h4>
 <div class="paragraph"><p>In the man page</p></div>
 <div class="ulist compact"><ul>
 <li>
@@ -4060,7 +4623,7 @@ for <em>unit</em>, <em>M</em> instead of <em>MB</em> is working
 <div class="ulist compact"><ul>
 <li>
 <p>
-actually it is probably due to the fact that mkpart default in megabytes
+actually it is probably due to the fact that <em>mkpart</em> default in megabytes
 </p>
 </li>
 </ul></div>
@@ -4074,7 +4637,7 @@ actually it is probably due to the fact that mkpart default in megabytes
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-07-16 19:29:53 EDT
+Last updated 2015-10-04 13:38:06 EDT
 </div>
 </div>
 </body>
