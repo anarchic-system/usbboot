@@ -111,7 +111,7 @@ The goal is the following (as of 2015-06): get a multi-purpose / multi-boot USB
 
 This means dropping the __msdos__ partition table and using the __GPT__ one.
 
-The problem here is that if some __BIOS__ can read a __GPT__ partition table if one add a specific partition that might not be easy. __GPT__ is (from my point of view) clearly designed to work with __(U)EFI__ systems (on booting storage devices, at least).
+The problem here is that if some __BIOS__ can read a __GPT__ partition table if one adds a specific partition that might not be easy. __GPT__ is (from my point of view) clearly designed to work with __(U)EFI__ systems (on booting storage devices, at least).
 
 
 ==== Live systems
@@ -136,7 +136,7 @@ It will not be the case first; the solution will be either a USB stick to boot 
 
 This requirement is also easy. One will have to add a partition for that. This partition will be crypted using __LUKS__.
 
-A few giga bytes should be enough (for everybody©®™).
+A few giga bytes ought to be enough (for everybody©®™).
 
 
 ==== Maintenance
@@ -164,16 +164,18 @@ So, one will try to (only) use ISO files. But there are two limits:
 ==== Big picture – BIOS only
 
 
-__BIOS__ does not care about __msdos__ or __GPT__ partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).
+__BIOS__ does not care if it is a __msdos__ or __GPT__ partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).
 
 [WARNING]
 .BIOS only meaning
 ==========================================
 By “BIOS only”, one means __Grub2__ version __i386-pc__ (**not** __x86_64-uefi__) and __msdos__ partition table.
 
-This USB stick is made to boot on computer using a __BIOS__ (**not** an __(U)EFI__).
+This USB stick is made to boot on computer using a __BIOS__ (**not** an __(U)EFI__ ; several things – no __ESP__, __FreeDOS__ – would break).
 
 By lack of time and hardware available to test, I gave up the combinaison __BIOS__ / __GPT__ partition table. This has the side advantage to not have to deal with a __BIOS boot partition__footnote:[https://en.wikipedia.org/wiki/BIOS_boot_partition] (aka __EF02__) and its alignment subtilities.
+
+TODO- add space right after the MBR, **properly aligned**, that can hold the __BIOS boot partition__ (aka __EF02__) – without filesystem – for the __BIOS__ version XOR the __EFI system partition__ (aka __ESP__) – with a filesystem – for thr __(U)EFI__ version of the USB stick. Or add both an __EF02__ followed by an __ESP__ ; one of the two will not be used depending on the version of the USB stick. -TODO
 ==========================================
 
 One USB stick with
