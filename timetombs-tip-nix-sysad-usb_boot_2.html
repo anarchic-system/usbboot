@@ -855,7 +855,7 @@ and have the solution as easily as possible maintenable (when one of the systems
 <div class="sect3">
 <h4 id="_modern_partition_table">1.2.1. Modern partition table</h4>
 <div class="paragraph"><p>This means dropping the <em>msdos</em> partition table and using the <em>GPT</em> one.</p></div>
-<div class="paragraph"><p>The problem here is that if some <em>BIOS</em> can read a <em>GPT</em> partition table if one add a specific partition that might not be easy. <em>GPT</em> is (from my point of view) clearly designed to work with <em>(U)EFI</em> systems (on booting storage devices, at least).</p></div>
+<div class="paragraph"><p>The problem here is that if some <em>BIOS</em> can read a <em>GPT</em> partition table if one adds a specific partition that might not be easy. <em>GPT</em> is (from my point of view) clearly designed to work with <em>(U)EFI</em> systems (on booting storage devices, at least).</p></div>
 </div>
 <div class="sect3">
 <h4 id="_live_systems">1.2.2. Live systems</h4>
@@ -872,7 +872,7 @@ and have the solution as easily as possible maintenable (when one of the systems
 <div class="sect3">
 <h4 id="_user_data">1.2.4. User data</h4>
 <div class="paragraph"><p>This requirement is also easy. One will have to add a partition for that. This partition will be crypted using <em>LUKS</em>.</p></div>
-<div class="paragraph"><p>A few giga bytes should be enough (for everybody©®™).</p></div>
+<div class="paragraph"><p>A few giga bytes ought to be enough (for everybody©®™).</p></div>
 </div>
 <div class="sect3">
 <h4 id="_maintenance">1.2.5. Maintenance</h4>
@@ -912,7 +912,7 @@ all live systems one may want be able to boot might not be bootable as an ISO im
 </div>
 <div class="sect3">
 <h4 id="id_bigpicture_bios">1.2.6. Big picture – BIOS only</h4>
-<div class="paragraph"><p><em>BIOS</em> does not care about <em>msdos</em> or <em>GPT</em> partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).</p></div>
+<div class="paragraph"><p><em>BIOS</em> does not care if it is a <em>msdos</em> or <em>GPT</em> partition table as it is so “basic” it does not even read hard disk (at least, it just checks there are some hard drive(s) present, at most, it reads their geometry).</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -978,8 +978,9 @@ vr6+wTfK/4tEfzeeMmUKkydPzhg8jJAAREgEg0H6+vrQNC2pFL8ZUVWVrKws8vPzycnJQVXVjH/s
 <td class="content">
 <div class="title">BIOS only meaning</div>
 <div class="paragraph"><p>By “BIOS only”, one means <em>Grub2</em> version <em>i386-pc</em> (<strong>not</strong> <em>x86_64-uefi</em>) and <em>msdos</em> partition table.</p></div>
-<div class="paragraph"><p>This USB stick is made to boot on computer using a <em>BIOS</em> (<strong>not</strong> an <em>(U)EFI</em>).</p></div>
+<div class="paragraph"><p>This USB stick is made to boot on computer using a <em>BIOS</em> (<strong>not</strong> an <em>(U)EFI</em> ; several things – no <em>ESP</em>, <em>FreeDOS</em> – would break).</p></div>
 <div class="paragraph"><p>By lack of time and hardware available to test, I gave up the combinaison <em>BIOS</em> / <em>GPT</em> partition table. This has the side advantage to not have to deal with a <em>BIOS boot partition</em><span class="footnote"><br />[<a href="https://en.wikipedia.org/wiki/BIOS_boot_partition">https://en.wikipedia.org/wiki/BIOS_boot_partition</a>]<br /></span> (aka <em>EF02</em>) and its alignment subtilities.</p></div>
+<div class="paragraph"><p>TODO- add space right after the MBR, <strong>properly aligned</strong>, that can hold the <em>BIOS boot partition</em> (aka <em>EF02</em>) – without filesystem – for the <em>BIOS</em> version XOR the <em>EFI system partition</em> (aka <em>ESP</em>) – with a filesystem – for thr <em>(U)EFI</em> version of the USB stick. Or add both an <em>EF02</em> followed by an <em>ESP</em> ; one of the two will not be used depending on the version of the USB stick. -TODO</p></div>
 </td>
 </tr></table>
 </div>
@@ -4637,7 +4638,7 @@ actually it is probably due to the fact that <em>mkpart</em> default in megabyte
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-10-04 13:38:06 EDT
+Last updated 2015-10-09 15:46:03 EDT
 </div>
 </div>
 </body>
